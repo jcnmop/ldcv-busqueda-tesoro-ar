@@ -4,6 +4,10 @@
 > entre sesiones y entre modelos (Fable → Opus → asistentes del LDCV).
 
 ## Última actualización
+2026-11-15 · **Prueba real en celular superada**: con la versión publicada en GitHub Pages,
+Juan Carlos recorrió las 4 estaciones escaneando los marcadores en pantalla; la RA se
+ve bien y el flujo completo funciona. Prototipo validado.
+
 2026-11-14 · Sesión inicial con Claude Fable 5.1. Bloques 1–3 completos; la app es
 jugable de punta a punta con CUATRO estaciones reales: viga-equilibrio,
 secuencia-constructiva, clash-bim y ojo-ingeniero.
@@ -28,6 +32,14 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 - [x] Docs: MARCADORES, MODELOS, SUPABASE, PUBLICAR.
 
 ## Pendiente (en orden sugerido)
+- [ ] **Ajustes detectados en la prueba real**:
+  - Mostrar el NOMBRE de la estación junto a la pista (el jugador no sabía qué marcador buscar).
+  - Limitar el ancho de la app en computadora (max-width ~480 px centrado).
+- [ ] **Rediseñar las preguntas/retos** para que no se puedan resolver con IA
+  (decisión de Juan Carlos: depurarlas después; ligarlas a observación física del sitio).
+- [ ] **Figuras y personajes propios** (fase siguiente): marcadores diseñados por el LDCV y
+  modelos 3D/mascota desde Blender (.glb). Agregar soporte de animaciones glTF (AnimationMixer).
+- [ ] Repetir la prueba en al menos un iPhone (Safari) y un Android de gama media.
 - [x] **Repositorio en GitHub**: https://github.com/jcnmop/ldcv-busqueda-tesoro-ar
 - [x] **Publicado en GitHub Pages**: https://jcnmop.github.io/ldcv-busqueda-tesoro-ar/
   (se republica solo en cada push a main). QR en `public/qr-inicio.png`.
