@@ -184,8 +184,8 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
   // 2a) GIRAR (modo por defecto): arrastrar horizontal gira, vertical inclina
   ok(await page.evaluate(() => globalThis.__escenaRA.modo()) === 'girar', `${est.nombre}: modo inicial = Girar`);
   const rot0 = await page.evaluate(() => globalThis.__escenaRA.manipulador.rotation.toArray());
-  await page.mouse.move(pObj[0], pObj[1]); await page.mouse.down();
-  await page.mouse.move(pObj[0] + 80, pObj[1] + 40, { steps: 6 }); await page.mouse.up();
+  await page.mouse.move(160, 280); await page.mouse.down();
+  await page.mouse.move(240, 320, { steps: 6 }); await page.mouse.up();
   const rot1 = await page.evaluate(() => globalThis.__escenaRA.manipulador.rotation.toArray());
   ok(Math.abs(rot1[2] - rot0[2]) > 0.5 && Math.abs(rot1[0] - rot0[0]) > 0.1, `${est.nombre}: Girar rota (${(rot1[2] - rot0[2]).toFixed(2)} rad) e inclina (${(rot1[0] - rot0[0]).toFixed(2)} rad)`);
   await page.waitForTimeout(300);
@@ -196,8 +196,9 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
   await page.click('.controles-ra [data-modo="mover"]');
   ok(await page.evaluate(() => globalThis.__escenaRA.modo()) === 'mover', `${est.nombre}: botón Mover activa el modo mover`);
   const pos0 = await page.evaluate(() => globalThis.__escenaRA.manipulador.position.toArray());
-  await page.mouse.move(pObj[0], pObj[1]); await page.mouse.down();
-  await page.mouse.move(pObj[0] + 70, pObj[1] - 50, { steps: 6 }); await page.mouse.up();
+  // Arrastrar desde el centro de la pantalla (lejos de los botones del panel inferior)
+  await page.mouse.move(160, 300); await page.mouse.down();
+  await page.mouse.move(230, 250, { steps: 6 }); await page.mouse.up();
   const pos1 = await page.evaluate(() => globalThis.__escenaRA.manipulador.position.toArray());
   ok(pos1[0] - pos0[0] > 0.05 && pos1[2] - pos0[2] > 0.03, `${est.nombre}: arrastrar con un dedo mueve el objeto (Δx=${(pos1[0] - pos0[0]).toFixed(2)}, Δarriba=${(pos1[2] - pos0[2]).toFixed(2)})`);
   await page.waitForTimeout(300);
@@ -216,6 +217,7 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
   await page.screenshot({ path: resolve(tmp, `atrapar-${id}.png`) });
   await page.waitForSelector('#minijuego:not([hidden])', { timeout: 6000 });
   ok(true, `${est.nombre}: atrapar la pieza dorada abre el reto`);
+  ok(/^\d+:\d{2}$/.test((await page.textContent('#cronometro')).trim()), `${est.nombre}: cronómetro visible (${(await page.textContent('#cronometro')).trim()})`);
   await page.screenshot({ path: resolve(tmp, `minijuego-${id}.png`) });
   await page.waitForSelector('#minijuego:not([hidden])');
 
@@ -289,6 +291,9 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
   ok(id === 'ojo-ingeniero' ? pts >= 0 : pts > 0, `${est.nombre}: +${pts} pts`);
   await page.waitForSelector('#puente canvas', { timeout: 15000 });
   ok(true, `${est.nombre}: pieza del puente mostrada`);
+  const resp = await page.textContent('#respuesta');
+  ok(resp.includes('Así se resuelve') && resp.includes('Referencia'), `${est.nombre}: respuesta y referencia tras el reto`);
+  if (i === 0) await page.screenshot({ path: resolve(tmp, 'resultado-respuesta.png'), fullPage: true });
   if (i === 1) { await page.waitForTimeout(1200); await page.screenshot({ path: resolve(tmp, 'resultado-puente.png') }); }
   await page.click('#seguir');
   await page.waitForTimeout(300);

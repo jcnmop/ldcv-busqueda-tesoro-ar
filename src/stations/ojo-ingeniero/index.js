@@ -27,6 +27,7 @@ const estacion = {
   pista: 'Frente a la fachada principal, en la baranda de la rampa.',
   tiempoLimiteMs: 90000,
   puntosMax: 100,
+  referencia: 'Estimación visual frente a medición: en el LDCV las magnitudes reales se obtienen con escáner láser (Leica P40/BLK360) y nubes de puntos.',
 
   crearObjeto(THREE) {
     const g = new THREE.Group();

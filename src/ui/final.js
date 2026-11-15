@@ -13,7 +13,8 @@ export function htmlRespuestas(estado, porId) {
     try { lineas = est?.explicarSolucion?.(c.detalle) ?? []; } catch { lineas = []; }
     if (!lineas.length) lineas = ['(Esta estación no tiene explicación disponible.)'];
     return h`<div style="margin-bottom:12px"><strong>${est?.nombre ?? c.estacionId}</strong> ${c.completado ? '✓' : '✗'}</div>`
-      + lineas.map((l) => h`<p class="muted" style="margin:0 0 4px 0">${l}</p>`).join('');
+      + lineas.map((l) => h`<p class="muted" style="margin:0 0 4px 0">${l}</p>`).join('')
+      + (est?.referencia ? h`<p class="muted" style="margin:6px 0 0 0;font-size:.85rem">📚 ${est.referencia}</p>` : '');
   }).join('<hr style="border:0;border-top:1px solid var(--azul);margin:12px 0">');
 }
 

@@ -18,6 +18,7 @@ const estacion = {
   pista: 'El marcador está dentro del LDCV, junto al escáner Leica P40.',
   tiempoLimiteMs: 180000,
   puntosMax: 100,
+  referencia: 'Coordinación BIM: detección de interferencias duras y por holgura (clearance) en el modelo federado, como en Navisworks, Revizto o ACC Model Coordination del LDCV.',
 
   crearObjeto(THREE) {
     const g = new THREE.Group();

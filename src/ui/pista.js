@@ -1,4 +1,4 @@
-import { h } from '../core/router.js';
+import { h, formatearMs } from '../core/router.js';
 import { estacionActual, puntosTotales, terminada } from '../core/estado.js';
 import { pantallaEscaneo } from './escaneo.js';
 import { pantallaFinal } from './final.js';
@@ -25,6 +25,8 @@ export function pantallaPista(raiz, { almacen, porId, ir }) {
     <div class="tarjeta">
       <h2>${est?.nombre ?? 'Estación'}</h2>
       <p>${est?.pista ?? 'Estación no encontrada en el registro.'}</p>
+      <p class="muted">⏱ Tiempo para el reto: <strong>${est ? formatearMs(est.tiempoLimiteMs) : '—'} min</strong>
+      · empieza a correr al atrapar la pieza dorada.</p>
     </div>
     <p class="muted">Cuando lleguen al punto, toquen el botón y apunten la cámara al marcador.</p>
     <button id="escanear" ${est ? '' : 'disabled'}>Escanear marcador</button>

@@ -17,6 +17,7 @@ const estacion = {
   pista: 'El marcador está en la pizarra exterior del LDCV, al lado de la puerta.',
   tiempoLimiteMs: 150000,
   puntosMax: 100,
+  referencia: 'Procesos constructivos y planificación de obra: precedencias entre actividades. En el LDCV, flujo de captura (Leica P40/BLK360) → registro → georreferenciación CRTM05 → modelo BIM.',
 
   crearObjeto(THREE) {
     const g = new THREE.Group();

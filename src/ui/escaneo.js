@@ -1,4 +1,4 @@
-import { h } from '../core/router.js';
+import { h, formatearMs } from '../core/router.js';
 import { estacionActual, completar } from '../core/estado.js';
 import { piezaDeEstacion } from '../core/puente.js';
 import { pantallaPista } from './pista.js';
@@ -95,7 +95,7 @@ export function pantallaEscaneo(raiz, ctx) {
         onEncontrado() {
           if (tocado) return;
           msg.innerHTML = '<strong>¡Lo encontraron!</strong> Elijan Girar o Mover y usen un dedo; con dos, acerquen. '
-            + '<strong>Atrapen la pieza dorada</strong> para empezar el reto.';
+            + `<strong>Atrapen la pieza dorada</strong> para empezar el reto (tendrán ${formatearMs(est.tiempoLimiteMs)} min).`;
           btnJugar.hidden = false; // alternativa accesible
           navigator.vibrate?.(30);
         },
@@ -172,9 +172,13 @@ export function pantallaEscaneo(raiz, ctx) {
     mjContainer.hidden = false;
     mjContainer.innerHTML = '';
 
+    // Cronómetro visible: tiempo grande + barra que se vacía; rojo y vibración al final
+    const total = est.tiempoLimiteMs;
     const cabecera = document.createElement('div');
-    cabecera.className = 'muted';
-    cabecera.innerHTML = h`<span id="cronometro">${Math.round(est.tiempoLimiteMs / 1000)}</span> s restantes`;
+    cabecera.className = 'cronometro';
+    cabecera.innerHTML = `
+      <div class="cronometro-fila"><span>⏱ Tiempo restante</span><strong id="cronometro">${formatearMs(total)}</strong></div>
+      <div class="cronometro-barra"><span id="cronometro-barra"></span></div>`;
     mjContainer.appendChild(cabecera);
     const cuerpo = document.createElement('div');
     cuerpo.style.cssText = 'display:flex;flex-direction:column;gap:16px;flex:1';
@@ -184,10 +188,16 @@ export function pantallaEscaneo(raiz, ctx) {
     mjContainer.appendChild(ayuda);
 
     const crono = cabecera.querySelector('#cronometro');
+    const barra = cabecera.querySelector('#cronometro-barra');
+    let avisado = false;
     const tic = setInterval(() => {
-      const rest = Math.max(0, Math.round((est.tiempoLimiteMs - (Date.now() - inicioMs)) / 1000));
-      crono.textContent = rest;
-    }, 500);
+      const restMs = Math.max(0, total - (Date.now() - inicioMs));
+      crono.textContent = formatearMs(restMs);
+      barra.style.width = `${(restMs / total) * 100}%`;
+      const urgente = restMs <= 20000;
+      cabecera.classList.toggle('urgente', urgente);
+      if (urgente && !avisado) { avisado = true; navigator.vibrate?.([80, 60, 80]); }
+    }, 250);
 
     const finalizar = (resultado) => {
       if (terminado) return;

@@ -25,9 +25,11 @@ export function pantallaResultado(raiz, { almacen, params, ir }) {
       <div id="puente" style="min-height:200px"></div>
     </div>
   ` : '') + (MOSTRAR_RESPUESTAS === 'siempre' && estacion.explicarSolucion ? `
-    <details class="tarjeta"><summary>Ver respuesta correcta</summary>
-      ${(estacion.explicarSolucion(resultado?.detalle) ?? []).map((l) => h`<p class="muted">${l}</p>`).join('')}
-    </details>` : '') + h`
+    <div class="tarjeta" id="respuesta">
+      <h2>Así se resuelve</h2>
+      ${(estacion.explicarSolucion(resultado?.detalle) ?? []).map((l) => h`<p>${l}</p>`).join('')}
+      ${estacion.referencia ? h`<p class="muted" style="border-top:1px solid var(--azul);padding-top:8px">📚 Referencia: ${estacion.referencia}</p>` : ''}
+    </div>` : '') + h`
     <button id="seguir">${terminada(estado) ? 'Ver el puente terminado' : 'Siguiente pista'}</button>
   `;
   raiz.querySelector('#seguir').addEventListener('click', () => ir(terminada(estado) ? pantallaFinal : pantallaPista));

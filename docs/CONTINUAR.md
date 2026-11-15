@@ -70,7 +70,14 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 - [x] Pieza dorada más pequeña/visible; tolerancias de toque ajustadas.
 - [x] 40 pruebas unitarias; e2e estable en corridas repetidas.
 
+## Ajustes 2026-11-15 (tarde)
+- [x] Cronómetro visible y aviso de tiempo antes del reto.
+- [x] "Así se resuelve" + referencia tras cada reto (config 'siempre').
+- [x] Flechas de carga de la viga corregidas.
+
 ## Pendiente (en orden sugerido)
+- [ ] **Reemplazar Detective de clashes** (a Juan Carlos no le convence): elegir entre las
+      3 propuestas del chat (cercha tensión/compresión en RA, nivelación topográfica, planificación de escaneo láser).
 - [ ] Ajustar la `pista` de la presa al punto real (Laboratorio de Hidráulica) e imprimir su póster.
 - [ ] Avatar propio de Juan Carlos: .glb con animaciones → `public/modelos/`, actualizar `AVATAR` en config.
 - [ ] Probar "Ver en mi espacio" en iPhone (Quick Look) y Android (WebXR) reales.

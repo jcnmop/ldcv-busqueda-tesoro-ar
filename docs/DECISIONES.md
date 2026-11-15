@@ -131,3 +131,12 @@ siempre entera; distractores: olvidar ÷2, solo presión de fondo, olvidar γ.
 ## 2026-11-15 · Pieza dorada más pequeña y órbita más corta
 **Motivo:** el halo ocupaba ~40 % del póster y "robaba" toques al objeto; en su extremo la
 pieza salía de la pantalla. Diagnóstico en `globalThis.__ramaToque`.
+
+## 2026-11-15 · Respuesta y referencia después de cada reto
+**Decisión de Juan Carlos:** MOSTRAR_RESPUESTAS = 'siempre'. Cada estación tiene `referencia`
+(curso o flujo del LDCV) además de `explicarSolucion`. Aceptado el riesgo de que los equipos
+compartan respuestas: los retos son aleatorios por equipo salvo Ojo de Ingeniero.
+
+## 2026-11-15 · Cronómetro visible
+Tiempo anunciado en la pista y al encontrar el marcador; durante el reto, mm:ss grande con
+barra; rojo y vibración en los últimos 20 s.

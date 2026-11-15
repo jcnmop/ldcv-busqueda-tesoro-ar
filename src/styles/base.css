@@ -133,3 +133,13 @@ input, select {
   background: rgba(11, 31, 58, 0.75); color: var(--blanco); border: 2px solid var(--gris);
 }
 .controles-ra button[aria-pressed="true"] { background: var(--ambar); color: var(--azul); border-color: var(--ambar); }
+
+/* Cronómetro del reto */
+.cronometro { position: sticky; top: -24px; z-index: 2; background: var(--azul); padding: 6px 0 8px; display: flex; flex-direction: column; gap: 6px; }
+.cronometro-fila { display: flex; justify-content: space-between; align-items: baseline; color: var(--gris); }
+.cronometro-fila strong { font-size: 1.6rem; color: var(--blanco); font-variant-numeric: tabular-nums; }
+.cronometro-barra { height: 8px; border-radius: 4px; background: var(--azul-claro); overflow: hidden; }
+.cronometro-barra span { display: block; height: 100%; width: 100%; background: var(--ok); transition: width .25s linear; }
+.cronometro.urgente .cronometro-fila strong { color: var(--error); animation: latido 1s infinite; }
+.cronometro.urgente .cronometro-barra span { background: var(--error); }
+@keyframes latido { 50% { opacity: .45; } }

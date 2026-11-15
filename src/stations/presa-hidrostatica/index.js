@@ -18,6 +18,7 @@ const estacion = {
   pista: 'Busquen el marcador junto al canal del Laboratorio de Hidráulica.',
   tiempoLimiteMs: 150000,
   puntosMax: 100,
+  referencia: 'Hidráulica, hidrostática: presión p = γ·h y empuje sobre superficies planas verticales, F = γ·h²/2 por metro de ancho, aplicado a h/3 desde el fondo.',
 
   crearObjeto(THREE) {
     const g = new THREE.Group();

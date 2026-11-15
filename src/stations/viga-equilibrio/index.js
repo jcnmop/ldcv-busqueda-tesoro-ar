@@ -17,6 +17,7 @@ const estacion = {
   pista: 'Busquen el marcador junto a la entrada principal del edificio de Ingeniería Civil, en la columna de la izquierda.',
   tiempoLimiteMs: 150000,
   puntosMax: 100,
+  referencia: 'Estática: equilibrio de una viga simplemente apoyada (ΣFy = 0, ΣM = 0) y concepto de resultante de cargas. Base de Análisis Estructural.',
 
   crearObjeto(THREE) {
     const g = new THREE.Group();
@@ -87,15 +88,13 @@ const estacion = {
       svg.innerHTML = `
         <g transform="rotate(${ang} 200 80)">
           <rect x="${X(0)}" y="76" width="${320}" height="8" fill="#9aa5b1" />
-          <line x1="${X(reto.x1)}" y1="30" x2="${X(reto.x1)}" y2="74" stroke="#d0453c" stroke-width="4" marker-end="url(#p)" />
+          <line x1="${X(reto.x1)}" y1="30" x2="${X(reto.x1)}" y2="64" stroke="#d0453c" stroke-width="4" />
+          <polygon points="${X(reto.x1) - 7},62 ${X(reto.x1) + 7},62 ${X(reto.x1)},75" fill="#d0453c" />
           <text x="${X(reto.x1)}" y="22" fill="#d0453c" font-size="13" text-anchor="middle">P₁=${reto.P1}</text>
-          <line x1="${X(x2)}" y1="30" x2="${X(x2)}" y2="74" stroke="#f2a900" stroke-width="4" marker-end="url(#p2)" />
+          <line x1="${X(x2)}" y1="30" x2="${X(x2)}" y2="64" stroke="#f2a900" stroke-width="4" />
+          <polygon points="${X(x2) - 7},62 ${X(x2) + 7},62 ${X(x2)},75" fill="#f2a900" />
           <text x="${X(x2)}" y="100" fill="#f2a900" font-size="13" text-anchor="middle">P₂=${reto.P2}</text>
         </g>
-        <defs>
-          <marker id="p" markerWidth="6" markerHeight="6" refX="3" refY="5" orient="auto"><path d="M0,0 L6,0 L3,6 z" fill="#d0453c"/></marker>
-          <marker id="p2" markerWidth="6" markerHeight="6" refX="3" refY="5" orient="auto"><path d="M0,0 L6,0 L3,6 z" fill="#f2a900"/></marker>
-        </defs>
         <polygon points="${X(0) - 12},110 ${X(0) + 12},110 ${X(0)},86" fill="#f2a900" />
         <polygon points="${X(reto.L) - 12},110 ${X(reto.L) + 12},110 ${X(reto.L)},86" fill="#f2a900" />
         <text x="${X(0)}" y="128" fill="#f7f7f5" font-size="14" text-anchor="middle">A</text>

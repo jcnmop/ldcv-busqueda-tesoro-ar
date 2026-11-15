@@ -9,7 +9,7 @@
  *   'siempre': también en la pantalla de resultado de cada estación (útil en clase).
  *   'nunca'  : no se muestran.
  */
-export const MOSTRAR_RESPUESTAS = 'al-final';
+export const MOSTRAR_RESPUESTAS = 'siempre'; // decisión 2026-11-15: respuesta y referencia tras cada reto
 
 /**
  * AVATAR DE BIENVENIDA. Para usar el avatar propio: exportar desde Blender un .glb con
