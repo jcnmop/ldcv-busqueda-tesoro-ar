@@ -8,6 +8,18 @@ import { puntajePorTiempo } from '../../core/puntaje.js';
 import { generarReto, evaluar } from './logica.js';
 
 const INTENTOS_MAX = 2;
+
+/** Datos para explicar la respuesta después (solo lo necesario, sin funciones). */
+function resumenClash(reto, tocadoId) {
+  const c = reto.elementos.find((e) => e.id === reto.culpableId);
+  const t = reto.elementos.find((e) => e.id === tocadoId);
+  return {
+    culpable: reto.culpableId,
+    culpableNombre: c.nombre, culpableZMin: c.zMin, culpableZMax: c.zMax,
+    vigaZMin: reto.viga.zMin, vigaZMax: reto.viga.zMax,
+    tocadoNombre: t?.nombre ?? null,
+  };
+}
 let limpiar = () => {};
 
 /** @type {import('../contrato.js').Estacion} */
@@ -96,14 +108,14 @@ const estacion = {
       if (r.correcto) {
         fb.innerHTML = `<span style="color:var(--ok)">¡Correcto! ${el.nombre} (tope ${el.zMax.toFixed(2)} m) invade la viga.</span>`;
         svg.removeEventListener('click', onToque);
-        setTimeout(() => ctx.terminar({ completado: true, aciertos: 1, intentos, detalle: { culpable: reto.culpableId } }), 1000);
+        setTimeout(() => ctx.terminar({ completado: true, aciertos: 1, intentos, detalle: resumenClash(reto, id) }), 1000);
         return;
       }
       if (intentos >= INTENTOS_MAX) {
         const c = elementos.find((e) => e.id === reto.culpableId);
         fb.innerHTML = `<span style="color:var(--error)">No. Era ${c.nombre}: su tope ${c.zMax.toFixed(2)} m está dentro del rango de la viga.</span>`;
         svg.removeEventListener('click', onToque);
-        setTimeout(() => ctx.terminar({ completado: false, aciertos: 0, intentos, detalle: { culpable: reto.culpableId, tocado: id } }), 2200);
+        setTimeout(() => ctx.terminar({ completado: false, aciertos: 0, intentos, detalle: resumenClash(reto, id) }), 2200);
         return;
       }
       fb.innerHTML = `<span style="color:var(--error)">${el.nombre} pasa por debajo (tope ${el.zMax.toFixed(2)} m &lt; ${viga.zMin.toFixed(2)} m).</span> Queda 1 intento.`;
@@ -113,6 +125,16 @@ const estacion = {
     svg.addEventListener('click', onToque);
     pintar();
     limpiar = () => svg.removeEventListener('click', onToque);
+  },
+
+  explicarSolucion(d) {
+    if (!d?.culpableNombre) return [];
+    return [
+      `La viga ocupa de ${d.vigaZMin.toFixed(2)} a ${d.vigaZMax.toFixed(2)} m.`,
+      `Choca: ${d.culpableNombre} (de ${d.culpableZMin.toFixed(2)} a ${d.culpableZMax.toFixed(2)} m): su tope supera el fondo de la viga.`,
+      'Regla: hay interferencia si los rangos de cota se traslapan (tope del elemento > fondo de la viga).',
+      d.tocadoNombre && d.tocadoNombre !== d.culpableNombre ? `Ustedes eligieron por último: ${d.tocadoNombre}.` : '',
+    ].filter(Boolean);
   },
 
   desmontar() {

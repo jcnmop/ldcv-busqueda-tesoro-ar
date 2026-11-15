@@ -103,15 +103,19 @@ function svgAPng(svgPath, pngPath) {
   return false;
 }
 
+// Marcadores especiales que no son estaciones (ver src/ui/puente-ra.js)
+const EXTRAS = [{ marcadorId: 'meta', nombre: 'META · Su puente en RA' }];
+
 let pngs = 0;
-for (const est of estaciones) {
+const todos = [...estaciones, ...EXTRAS];
+for (const est of todos) {
   const svgPath = resolve(salida, `${est.marcadorId}.svg`);
   writeFileSync(svgPath, marcadorSVG(est));
   const pngPath = resolve(salida, `${est.marcadorId}.png`);
   if (svgAPng(svgPath, pngPath)) pngs++;
   console.log(`✓ ${est.marcadorId}.svg${existsSync(pngPath) ? ' + .png' : ''}`);
 }
-if (pngs < estaciones.length) {
+if (pngs < todos.length) {
   console.log('\nAviso: no se pudo convertir a PNG en esta máquina. Abra el .svg en el navegador o en');
   console.log('Inkscape y expórtelo a PNG de 1000×1000 antes de compilar el .mind.');
 }

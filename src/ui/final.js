@@ -1,8 +1,22 @@
 import { h, formatearMs } from '../core/router.js';
 import { puntosTotales, resumen } from '../core/estado.js';
 import { piezasDelEquipo, puenteCompleto } from '../core/puente.js';
+import { MOSTRAR_RESPUESTAS } from '../config.js';
+import { pantallaPuenteRA } from './puente-ra.js';
 
-export function pantallaFinal(raiz, { almacen, porId, obtenerBackend }) {
+/** Bloque HTML con las respuestas correctas de cada estación jugada. */
+export function htmlRespuestas(estado, porId) {
+  return estado.completadas.map((c) => {
+    const est = porId[c.estacionId];
+    let lineas = [];
+    try { lineas = est?.explicarSolucion?.(c.detalle) ?? []; } catch { lineas = []; }
+    if (!lineas.length) lineas = ['(Esta estación no tiene explicación disponible.)'];
+    return h`<div style="margin-bottom:12px"><strong>${est?.nombre ?? c.estacionId}</strong> ${c.completado ? '✓' : '✗'}</div>`
+      + lineas.map((l) => h`<p class="muted" style="margin:0 0 4px 0">${l}</p>`).join('');
+  }).join('<hr style="border:0;border-top:1px solid var(--azul);margin:12px 0">');
+}
+
+export function pantallaFinal(raiz, { almacen, porId, obtenerBackend, ir }) {
   const estado = almacen.get();
   const r = resumen(estado);
   const piezas = piezasDelEquipo(estado);
@@ -21,12 +35,28 @@ export function pantallaFinal(raiz, { almacen, porId, obtenerBackend }) {
       <h2>Su puente: ${obtenidas} de ${piezas.length} piezas</h2>
       <div id="puente" style="min-height:240px"></div>
       <p class="muted">${completo ? 'Construyeron el puente completo. ¡Excelente trabajo de equipo!' : 'Las piezas en rojo son retos no superados.'}</p>
+      <button id="ver-ra">Ver mi puente en RA (póster META)</button>
     </div>
+    <div class="tarjeta" id="bloque-respuestas" hidden>
+      <h2>Respuestas correctas</h2>
+      <div id="respuestas"></div>
+    </div>
+    <button id="btn-respuestas" class="secundario" ${MOSTRAR_RESPUESTAS === 'nunca' ? 'hidden' : ''}>Ver respuestas correctas</button>
     <div class="tarjeta" id="detalle"></div>
     <p class="muted">Presenten esta pantalla en la mesa del LDCV para validar su resultado.</p>
     <p class="muted" id="sync"></p>
     <button id="nuevo" class="secundario">Nuevo equipo (borrar esta partida)</button>
   `;
+
+  raiz.querySelector('#ver-ra').addEventListener('click', () => ir(pantallaPuenteRA, { volver: pantallaFinal }));
+  const btnResp = raiz.querySelector('#btn-respuestas');
+  const bloqueResp = raiz.querySelector('#bloque-respuestas');
+  btnResp.addEventListener('click', () => {
+    if (bloqueResp.hidden) raiz.querySelector('#respuestas').innerHTML = htmlRespuestas(estado, porId);
+    bloqueResp.hidden = !bloqueResp.hidden;
+    btnResp.textContent = bloqueResp.hidden ? 'Ver respuestas correctas' : 'Ocultar respuestas';
+    if (!bloqueResp.hidden) bloqueResp.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 
   raiz.querySelector('#nuevo').addEventListener('click', () => {
     if (confirm('¿Empezar con un equipo nuevo? Se borra la partida de este celular (el resultado ya enviado al servidor se conserva).')) {

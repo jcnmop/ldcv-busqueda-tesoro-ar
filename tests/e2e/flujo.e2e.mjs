@@ -144,26 +144,47 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
   });
   if (id === 'ojo-ingeniero') ok(animaciones.includes('Wave') && animaciones.includes('Jump'), `Robot animado cargado (${animaciones.length} animaciones)`);
 
-  // TOCAR EL OBJETO 3D: proyectar el centro de su caja envolvente a coordenadas de pantalla
-  const punto = await page.evaluate(() => {
-    const { THREE, camera, renderer, ancla } = globalThis.__escenaRA;
-    const centro = new THREE.Box3().setFromObject(ancla.group).getCenter(new THREE.Vector3());
+  // Proyecta a pantalla el centro de un objeto de la escena RA (filtro: 'coleccionable' | 'objeto')
+  const proyectar = (filtro) => page.evaluate((f) => {
+    const { THREE, camera, renderer, ancla, manipulador } = globalThis.__escenaRA;
+    let blanco = null;
+    if (f === 'coleccionable') ancla.group.traverse((o) => { if (o.userData?.coleccionable) blanco = o; });
+    else blanco = manipulador.children[0].children[0]; // conjunto → objeto de la estación
+    const centro = new THREE.Box3().setFromObject(blanco).getCenter(new THREE.Vector3());
     const v = centro.project(camera);
     const r = renderer.domElement.getBoundingClientRect();
     return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
-  });
-  console.log('  punto de toque:', punto.map(Math.round).join(','), await page.evaluate(([x, y]) => {
-    const { THREE, camera, renderer, ancla, estaVisible } = globalThis.__escenaRA;
-    const r = renderer.domElement.getBoundingClientRect();
-    const rc = new THREE.Raycaster();
-    rc.setFromCamera(new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1), camera);
-    const el = document.elementFromPoint(x, y);
-    return JSON.stringify({ hits: rc.intersectObject(ancla.group, true).length, visible: estaVisible(), el: el?.tagName + '.' + el?.className, canvas: [r.left, r.top, r.width, r.height].map(Math.round) });
-  }, punto));
-  await page.screenshot({ path: resolve(tmp, `toque-${id}.png`) });
+  }, filtro);
+
+  // 1) Tocar el OBJETO: debe reaccionar pero NO abrir el reto.
+  //    Esperar a que la pieza dorada (que orbita) no esté encima del punto a tocar.
+  let pObj;
+  for (let k = 0; k < 20; k++) {
+    pObj = await proyectar('objeto');
+    const pc = await proyectar('coleccionable');
+    if (Math.hypot(pObj[0] - pc[0], pObj[1] - pc[1]) > 110) break;
+    await page.waitForTimeout(300);
+  }
+  await page.mouse.click(pObj[0], pObj[1]);
+  await page.waitForTimeout(900);
+  ok(await page.$eval('#minijuego', (el) => el.hidden), `${est.nombre}: tocar el objeto solo reacciona (no abre el reto)`);
+
+  // 2) GIRAR con un dedo: arrastre horizontal cambia la rotación del manipulador
+  const rot0 = await page.evaluate(() => globalThis.__escenaRA.manipulador.rotation.z);
+  await page.mouse.move(pObj[0] - 60, pObj[1]); await page.mouse.down();
+  await page.mouse.move(pObj[0] + 60, pObj[1], { steps: 6 }); await page.mouse.up();
+  const rot1 = await page.evaluate(() => globalThis.__escenaRA.manipulador.rotation.z);
+  ok(Math.abs(rot1 - rot0) > 0.5, `${est.nombre}: arrastrar gira el objeto (${(rot1 - rot0).toFixed(2)} rad)`);
+  await page.waitForTimeout(400);
+  await page.screenshot({ path: resolve(tmp, `ar-${id}-girado.png`) });
+
+  // 3) ATRAPAR la pieza dorada: abre el reto
+  const punto = await proyectar('coleccionable');
   await page.mouse.click(punto[0], punto[1]);
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: resolve(tmp, `atrapar-${id}.png`) });
   await page.waitForSelector('#minijuego:not([hidden])', { timeout: 6000 });
-  ok(true, `${est.nombre}: tocar el objeto 3D abre el reto`);
+  ok(true, `${est.nombre}: atrapar la pieza dorada abre el reto`);
   await page.screenshot({ path: resolve(tmp, `minijuego-${id}.png`) });
   await page.waitForSelector('#minijuego:not([hidden])');
 
@@ -229,7 +250,7 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
 
 // ---------- 4c. Final y tablero ----------
 {
-  const { nav, page } = await abrirNavegador(videoDeMarcador(estadoSemilla.ruta[0]));
+  const { nav, page } = await abrirNavegador(videoDeMarcador('meta'));
   // Cada lanzamiento tiene su propio localStorage: forzar que sincronice aquí para poblar el tablero local
   await page.addInitScript(([k, v]) => localStorage.setItem(k, v), [CLAVE_STORAGE, JSON.stringify({ ...estadoActual, sincronizado: false })]);
   await page.goto(base + '/');
@@ -241,6 +262,32 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
   await page.screenshot({ path: resolve(tmp, 'final-puente.png'), fullPage: true });
   await page.waitForFunction(() => /enviado/.test(document.querySelector('#sync')?.textContent || ''), null, { timeout: 5000 });
   ok(true, 'Sincronizado con backend local');
+
+  // Respuestas correctas
+  await page.click('#btn-respuestas');
+  const resp = await page.textContent('#respuestas');
+  ok(/resultante|Orden correcto|Choca|Valor medido/.test(resp), 'Respuestas correctas visibles al final');
+  await page.screenshot({ path: resolve(tmp, 'respuestas.png'), fullPage: true });
+
+  // Puente en RA con el póster META
+  await page.click('#ver-ra');
+  await page.waitForFunction(() => globalThis.__escenaRA?.estaVisible?.(), null, { timeout: 90000 });
+  ok(true, 'Póster META reconocido: puente del equipo en RA');
+  await page.waitForTimeout(3500); // piezas cayendo en secuencia
+  await page.screenshot({ path: resolve(tmp, 'puente-ra.png') });
+  const pPieza = await page.evaluate(() => {
+    const { THREE, camera, renderer, ancla } = globalThis.__escenaRA;
+    let blanco = null;
+    ancla.group.traverse((o) => { if (o.userData?.piezaId === 'tablero') blanco = o; });
+    const v = new THREE.Box3().setFromObject(blanco).getCenter(new THREE.Vector3()).project(camera);
+    const r = renderer.domElement.getBoundingClientRect();
+    return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
+  });
+  await page.mouse.click(pPieza[0], pPieza[1]);
+  await page.waitForTimeout(300);
+  ok((await page.textContent('#ar-msg')).includes('Tablero'), 'Tocar una pieza del puente en RA muestra su función');
+  await page.click('#volver');
+  await page.waitForSelector('#detalle');
   await page.goto(base + '/tablero.html');
   await page.waitForSelector('table');
   ok((await page.textContent('table')).includes('Prueba E2E'), 'Tablero muestra al equipo');

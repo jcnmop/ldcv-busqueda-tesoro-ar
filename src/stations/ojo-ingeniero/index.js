@@ -8,6 +8,7 @@
  * (con el P40 o el BLK360, lo que da autoridad a la respuesta).
  */
 import { etiqueta, cargarGLB } from '../../ar/modelos.js';
+import { MOSTRAR_RESPUESTAS } from '../../config.js';
 
 // TODO (organizador): reemplazar por magnitudes medidas en los puntos reales.
 const MAGNITUDES = [
@@ -56,11 +57,12 @@ const estacion = {
     return g;
   },
 
-  /** Al tocarlo: el robot salta y levanta el pulgar. Devuelve ms de espera antes del reto. */
+  /** Al tocar el robot: cambia de animación en cada toque (la pieza dorada abre el reto). */
   alTocar(objeto) {
     const robot = objeto.userData.robot;
-    robot?.userData.reproducir?.('Jump', { unaVez: true, luego: 'ThumbsUp' });
-    return 1600;
+    const lista = ['Jump', 'ThumbsUp', 'Dance', 'Yes', 'Wave', 'Punch'];
+    const i = (objeto.userData.toques = (objeto.userData.toques ?? -1) + 1) % lista.length;
+    robot?.userData.reproducir?.(lista[i], { unaVez: true });
   },
 
   montarMinijuego(contenedor, ctx) {
@@ -83,12 +85,23 @@ const estacion = {
       const estimado = +slider.value;
       const errorPct = Math.abs(estimado - m.real) / m.real * 100;
       btn.disabled = true;
-      fb.innerHTML = `Valor medido por el LDCV: <strong>${m.real} ${m.unidad}</strong>. Error: <strong>${errorPct.toFixed(1)} %</strong>.`;
-      setTimeout(() => ctx.terminar({ completado: errorPct <= 30, aciertos: errorPct <= 10 ? 1 : 0, intentos: 1, detalle: { que: m.que, real: m.real, estimado, errorPct } }), 2200);
+      fb.innerHTML = MOSTRAR_RESPUESTAS === 'siempre'
+        ? `Valor medido por el LDCV: <strong>${m.real} ${m.unidad}</strong>. Error: <strong>${errorPct.toFixed(1)} %</strong>.`
+        : `Error de su estimación: <strong>${errorPct.toFixed(1)} %</strong>. El valor real se revela al final del recorrido.`;
+      setTimeout(() => ctx.terminar({ completado: errorPct <= 30, aciertos: errorPct <= 10 ? 1 : 0, intentos: 1, detalle: { que: m.que, real: m.real, unidad: m.unidad, estimado, errorPct } }), 2200);
     };
     slider.addEventListener('input', onInput);
     btn.addEventListener('click', onResponder);
     limpiar = () => { slider.removeEventListener('input', onInput); btn.removeEventListener('click', onResponder); };
+  },
+
+  explicarSolucion(d) {
+    if (d?.real == null) return [];
+    return [
+      `Había que estimar ${d.que}.`,
+      `Valor medido por el LDCV: ${d.real} ${d.unidad ?? 'm'}. Ustedes estimaron ${Number(d.estimado).toFixed(2)} ${d.unidad ?? 'm'} (error ${d.errorPct.toFixed(1)} %).`,
+      'Puntaje: 100 con error 0 %, baja linealmente hasta 0 con 30 % de error.',
+    ];
   },
 
   desmontar() {

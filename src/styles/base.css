@@ -32,6 +32,7 @@ html, body {
 }
 
 #ar-container {
+  touch-action: none; /* los gestos de girar/pellizcar son del objeto, no de la página */
   position: fixed;
   inset: 0;
   z-index: 10;

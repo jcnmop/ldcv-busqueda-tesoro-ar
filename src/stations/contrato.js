@@ -61,9 +61,14 @@
  *   siempre el objeto "Z arriba" con la base en z=0; la escena lo endereza según el caso.
  *
  * @property {(objeto: import('three').Object3D, ctx: { THREE: typeof import('three') }) => (number|void)} [alTocar]
- *   OPCIONAL. Se llama cuando el jugador toca el objeto 3D en RA. Úsese para una reacción
- *   (animación, sonido). Si devuelve un número, son los ms a esperar antes de abrir el reto.
- *   Si no se define, el objeto hace un rebote genérico.
+ *   OPCIONAL. Se llama cada vez que el jugador toca el objeto 3D en RA: solo una REACCIÓN
+ *   (animación, sonido, cambio de color). El reto se abre al atrapar la pieza dorada del puente,
+ *   que el núcleo agrega automáticamente. Si no se define, el objeto hace un rebote genérico.
+ *
+ * @property {(detalle: any) => string[]} [explicarSolucion]
+ *   OPCIONAL. Recibe el `detalle` que la estación pasó en ctx.terminar() y devuelve líneas
+ *   de texto con la respuesta correcta y lo que hizo el equipo. Se muestra según
+ *   MOSTRAR_RESPUESTAS (src/config.js). Guardar en `detalle` todo lo necesario para explicar.
  *
  * @property {() => void} desmontar
  *   Limpia todo lo creado por montarMinijuego y crearObjeto.
@@ -93,6 +98,13 @@ export function validarEstacion(e) {
   req('montarMinijuego', 'function');
   req('desmontar', 'function');
   req('calcularPuntaje', 'function');
+
+  const opc = (campo, tipo) => {
+    if (e?.[campo] !== undefined && typeof e[campo] !== tipo) errores.push(`"${campo}" (opcional) debe ser ${tipo}`);
+  };
+  opc('alTocar', 'function');
+  opc('explicarSolucion', 'function');
+  if (e?.orientacion !== undefined && !['pared', 'mesa'].includes(e.orientacion)) errores.push('"orientacion" debe ser "pared" o "mesa"');
 
   if (typeof e?.id === 'string' && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(e.id)) {
     errores.push('"id" debe estar en kebab-case (ej: viga-equilibrio)');

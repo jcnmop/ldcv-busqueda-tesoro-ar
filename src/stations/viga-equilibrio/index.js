@@ -137,6 +137,18 @@ const estacion = {
     };
   },
 
+  explicarSolucion(d) {
+    if (!d?.reto) return [];
+    const { L, P1, x1, P2, objetivo } = d.reto;
+    const R = (P1 + P2) / 2;
+    return [
+      `Viga de ${L} m con P₁ = ${P1} kN a ${x1} m de A y P₂ = ${P2} kN.`,
+      `Para que R_A = R_B = ${R.toFixed(1)} kN, la resultante de las cargas debe caer en el centro (${(L / 2).toFixed(2)} m).`,
+      `P₁·x₁ + P₂·x₂ = (P₁ + P₂)·L/2  →  x₂ = ${objetivo.toFixed(2)} m desde A.`,
+      d.x2 != null ? `Ustedes colocaron P₂ en ${Number(d.x2).toFixed(2)} m.` : '',
+    ].filter(Boolean);
+  },
+
   desmontar() {
     limpiar();
     limpiar = () => {};

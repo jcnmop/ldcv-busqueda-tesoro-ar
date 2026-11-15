@@ -41,8 +41,18 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 - [x] Nombre de la estación en la pista; ancho máximo 520 px en computadora.
 - [x] 31 pruebas unitarias; e2e toca el objeto 3D en las 4 estaciones.
 
+## Bloque visual 2 (2026-11-15) — hecho
+- [x] Gestos en RA: arrastrar = girar, pellizcar = escalar (`manipulador` en escena.js).
+- [x] Pieza dorada del puente orbitando: atraparla abre el reto; tocar el objeto solo reacciona
+      (robot: cambia de animación en cada toque).
+- [x] Póster META (`public/marcadores/meta.*`): el equipo ve SU puente en RA, piezas cayendo,
+      confeti si está completo, tocar una pieza muestra su función. `src/ui/puente-ra.js`.
+- [x] Respuestas correctas: `explicarSolucion(detalle)` en cada estación; botón al final.
+      Configurable en `src/config.js`.
+- [x] 33 pruebas unitarias; e2e cubre tocar, girar, atrapar, respuestas y puente en RA.
+
 ## Pendiente (en orden sugerido)
-- [ ] Probar en celular real el Bloque visual 1 (robot, toque, puente).
+- [ ] Probar en celular real el Bloque visual 2 (gestos con dedos reales, pieza dorada, META).
 - [ ] Marcadores con QR pequeño en una esquina (abrir la app desde el póster).
 - [ ] **Rediseñar las preguntas/retos** para que no se puedan resolver con IA
   (decisión de Juan Carlos: depurarlas después; ligarlas a observación física del sitio).
@@ -80,7 +90,7 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 ```bash
 git clone <repo> && cd ldcv-busqueda-tesoro-ar
 npm install
-npm test                      # debe dar 31/31
+npm test                      # debe dar 33/33
 npm run dev                   # abrir la URL de red en el celular (https)
 # opcional, para la prueba automática de RA (requiere Chrome y ffmpeg):
 npm run marcadores:compilar && npm run e2e

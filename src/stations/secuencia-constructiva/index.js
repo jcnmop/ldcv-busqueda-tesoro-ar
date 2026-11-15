@@ -83,14 +83,14 @@ const estacion = {
       if (r.correcto) {
         fb.innerHTML = '<span style="color:var(--ok)">¡Secuencia correcta!</span>';
         btn.disabled = true;
-        setTimeout(() => ctx.terminar({ completado: true, aciertos: r.aciertos, intentos: verificaciones, detalle: { titulo: reto.titulo } }), 900);
+        setTimeout(() => ctx.terminar({ completado: true, aciertos: r.aciertos, intentos: verificaciones, detalle: { titulo: reto.titulo, total: r.total, correcto: reto.correcto, propuesta: [...orden] } }), 900);
         return;
       }
       if (verificaciones >= VERIFICACIONES_MAX) {
         fb.innerHTML = `<span style="color:var(--error)">${r.aciertos} de ${r.total} en su lugar.</span> Se acabaron las verificaciones.`;
         btn.disabled = true;
         lista.removeEventListener('click', onToque);
-        setTimeout(() => ctx.terminar({ completado: r.aciertos >= Math.ceil(r.total / 2), aciertos: r.aciertos, intentos: verificaciones, detalle: { titulo: reto.titulo, total: r.total } }), 1800);
+        setTimeout(() => ctx.terminar({ completado: r.aciertos >= Math.ceil(r.total / 2), aciertos: r.aciertos, intentos: verificaciones, detalle: { titulo: reto.titulo, total: r.total, correcto: reto.correcto, propuesta: [...orden] } }), 1800);
         return;
       }
       fb.innerHTML = `<span style="color:var(--error)">${r.aciertos} de ${r.total} en su lugar.</span> Verde = correcto. Queda 1 verificación.`;
@@ -103,6 +103,14 @@ const estacion = {
       lista.removeEventListener('click', onToque);
       btn.removeEventListener('click', onVerificar);
     };
+  },
+
+  explicarSolucion(d) {
+    if (!d?.correcto) return [];
+    return [
+      `${d.titulo}. Orden correcto:`,
+      ...d.correcto.map((p, i) => `${i + 1}. ${p}${d.propuesta && d.propuesta[i] !== p ? '   ✗ (ustedes: ' + d.propuesta[i] + ')' : ''}`),
+    ];
   },
 
   desmontar() {

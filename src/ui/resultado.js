@@ -3,6 +3,7 @@ import { puntosTotales, terminada } from '../core/estado.js';
 import { piezaDeEstacion, piezasDelEquipo } from '../core/puente.js';
 import { pantallaPista } from './pista.js';
 import { pantallaFinal } from './final.js';
+import { MOSTRAR_RESPUESTAS } from '../config.js';
 
 export function pantallaResultado(raiz, { almacen, params, ir }) {
   const { estacion, puntos, tiempoUsado, resultado } = params;
@@ -23,7 +24,10 @@ export function pantallaResultado(raiz, { almacen, params, ir }) {
       <p class="muted">${ok ? pieza.descripcion : 'Quedará un hueco en su puente. ¡Ánimo en la siguiente!'}</p>
       <div id="puente" style="min-height:200px"></div>
     </div>
-  ` : '') + h`
+  ` : '') + (MOSTRAR_RESPUESTAS === 'siempre' && estacion.explicarSolucion ? `
+    <details class="tarjeta"><summary>Ver respuesta correcta</summary>
+      ${(estacion.explicarSolucion(resultado?.detalle) ?? []).map((l) => h`<p class="muted">${l}</p>`).join('')}
+    </details>` : '') + h`
     <button id="seguir">${terminada(estado) ? 'Ver el puente terminado' : 'Siguiente pista'}</button>
   `;
   raiz.querySelector('#seguir').addEventListener('click', () => ir(terminada(estado) ? pantallaFinal : pantallaPista));

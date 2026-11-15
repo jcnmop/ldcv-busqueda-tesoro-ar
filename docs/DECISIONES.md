@@ -76,3 +76,16 @@ péndolas). Pieza ganada solo si el reto se completa; si no, queda un hueco visi
 ## 2026-11-15 · Robot de prueba CC0 (three.js RobotExpressive)
 **Motivo:** validar animaciones y toque sin esperar modelos propios. Licencia CC0 1.0.
 Se reemplazará por personajes/mascota del LDCV hechos en Blender.
+
+## 2026-11-15 · Pieza dorada para abrir el reto; tocar el objeto solo reacciona
+**Motivo:** más interacción (estilo "atrapar") sin perder control: el objeto se puede girar
+(1 dedo), escalar (pellizco) y tocar para reacciones; el reto empieza al atrapar la pieza
+del puente que orbita por delante del póster. Prioridad de toques en `escena.js`.
+
+## 2026-11-15 · Respuestas correctas al final del recorrido (configurable)
+**Motivo:** retos de valor fijo (Ojo de Ingeniero) se filtrarían entre equipos si la respuesta
+se muestra al instante. `src/config.js → MOSTRAR_RESPUESTAS` ('al-final' | 'siempre' | 'nunca').
+
+## 2026-11-15 · Póster META para ver el puente del equipo en RA
+**Motivo:** cierre visual del recorrido en la mesa del LDCV. Marcador especial `meta`
+generado por `tools/marcadores.js` (lista EXTRAS), no es una estación.

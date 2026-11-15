@@ -101,3 +101,30 @@ test('ojo: puntaje por error porcentual', () => {
   assert.equal(ojo.calcularPuntaje({ detalle: { errorPct: 45 } }), 0);
   assert.equal(ojo.calcularPuntaje({}), 0);
 });
+
+// ---- Respuestas correctas (explicarSolucion) y opcionales del contrato ----
+test('cada estación real explica su solución a partir del detalle', () => {
+  const vRet = vigaLogica.generarReto(rngFijo(5));
+  const v = viga.explicarSolucion({ reto: vRet, x2: 1 });
+  assert.ok(v.length >= 3 && v.some((l) => l.includes(vRet.objetivo.toFixed(2))));
+
+  const sRet = secLogica.generarReto(rngFijo(9));
+  const s = secuencia.explicarSolucion({ titulo: sRet.titulo, correcto: sRet.correcto, propuesta: sRet.desordenados });
+  assert.equal(s.length, sRet.correcto.length + 1);
+
+  const c = clash.explicarSolucion({ culpableNombre: 'Ducto de aire', culpableZMin: 2.9, culpableZMax: 3.3, vigaZMin: 3.0, vigaZMax: 3.5 });
+  assert.ok(c.some((l) => l.includes('Ducto de aire')));
+
+  const o = ojo.explicarSolucion({ que: 'la altura', real: 14.2, unidad: 'm', estimado: 12, errorPct: 15.5 });
+  assert.ok(o.some((l) => l.includes('14.2')));
+
+  // Sin detalle no revienta
+  for (const e of [viga, secuencia, clash, ojo]) assert.deepEqual(e.explicarSolucion(undefined), []);
+});
+
+test('validarEstacion revisa los campos opcionales', () => {
+  const base = { ...viga };
+  assert.deepEqual(validarEstacion({ ...base, orientacion: 'mesa' }), []);
+  assert.ok(validarEstacion({ ...base, orientacion: 'techo' }).length === 1);
+  assert.ok(validarEstacion({ ...base, alTocar: 'no' }).length === 1);
+});

@@ -1,5 +1,6 @@
 import { h } from '../core/router.js';
 import { estacionActual, completar } from '../core/estado.js';
+import { piezaDeEstacion } from '../core/puente.js';
 import { pantallaPista } from './pista.js';
 import { pantallaResultado } from './resultado.js';
 
@@ -77,33 +78,68 @@ export function pantallaEscaneo(raiz, ctx) {
   if (!modoDemo) (async () => {
     try {
       const { crearEscena, THREE } = await import('../ar/escena.js');
+      const { rebote } = await import('../ar/modelos.js');
+      const { piezaMini } = await import('./puente3d.js');
       const objeto = est.crearObjeto(THREE);
+
+      // Pieza del puente que corresponde a esta estación: flota frente al objeto y hay que atraparla
+      const pieza = piezaDeEstacion(estado, est.id);
+      const coleccionable = piezaMini(THREE, pieza?.id);
+      const conjunto = new THREE.Group();
+      conjunto.add(objeto, coleccionable);
+
       escena = await crearEscena(arContainer, {
         marcadorSrc: `${import.meta.env.BASE_URL}marcadores/${est.marcadorId}.mind`,
-        objeto,
+        objeto: conjunto,
         orientacion: est.orientacion ?? 'pared',
         onEncontrado() {
           if (tocado) return;
-          msg.innerHTML = '<strong>¡Lo encontraron!</strong> Toquen el objeto para empezar el reto.';
-          btnJugar.hidden = false; // alternativa accesible al toque
+          msg.innerHTML = '<strong>¡Lo encontraron!</strong> Giren el objeto con un dedo y acérquenlo con dos. '
+            + '<strong>Atrapen la pieza dorada</strong> para empezar el reto.';
+          btnJugar.hidden = false; // alternativa accesible
           navigator.vibrate?.(30);
         },
         onPerdido() { /* el botón sigue disponible: ya probaron que están ahí */ },
       });
-      // Tocar el objeto 3D: reacción de la estación (o rebote genérico) y luego el reto
-      escena.alTocar(async () => {
+
+      // Órbita de la pieza: siempre por delante del póster (diseño: -Y = hacia el jugador)
+      let t = 0;
+      let atrapada = false;
+      escena.enCadaCuadro((dt) => {
+        if (atrapada) return;
+        t += dt;
+        coleccionable.position.set(0.42 * Math.sin(t * 0.9), -0.28 - 0.08 * Math.cos(t * 0.9), 0.62 + 0.06 * Math.sin(t * 2.3));
+      });
+
+      let ultimoToque = 0;
+      escena.alTocar((tipo) => {
         if (tocado) return;
-        tocado = true;
-        navigator.vibrate?.([20, 40, 20]);
-        msg.innerHTML = '<strong>¡Bien!</strong> Preparando el reto…';
-        const { rebote } = await import('../ar/modelos.js');
-        let espera = 900;
-        try {
-          const r = est.alTocar ? est.alTocar(objeto, { THREE }) : null;
-          if (typeof r === 'number') espera = r; // la estación puede pedir más tiempo para su animación
-          else if (!est.alTocar) rebote(objeto);
-        } catch (e) { console.warn('alTocar:', e); }
-        setTimeout(() => { if (!cancelado) iniciarMinijuego(); }, espera);
+        if (tipo === 'coleccionable') {
+          tocado = true;
+          atrapada = true;
+          navigator.vibrate?.([30, 50, 60]);
+          msg.innerHTML = pieza
+            ? h`<strong>¡Atraparon: ${pieza.nombre}!</strong> Superen el reto para colocarla en su puente.`
+            : '<strong>¡Atrapada!</strong> Preparando el reto…';
+          // Animación: la pieza crece, sube y se acerca al jugador
+          const p0 = coleccionable.position.clone();
+          let ta = 0;
+          coleccionable.userData.efecto = (dt) => {
+            ta += dt;
+            const k = Math.min(ta / 0.8, 1);
+            coleccionable.scale.setScalar(1 + 1.6 * k);
+            coleccionable.position.set(p0.x * (1 - k), p0.y - 0.5 * k, p0.z + 0.3 * k);
+            if (k >= 1) { coleccionable.visible = false; coleccionable.userData.efecto = null; }
+          };
+          setTimeout(() => { if (!cancelado) iniciarMinijuego(); }, 1500);
+          return;
+        }
+        // Tocar el objeto: solo reacciona (la estación decide cómo; si no, rebota)
+        const ahora = performance.now();
+        if (ahora - ultimoToque < 350) return;
+        ultimoToque = ahora;
+        navigator.vibrate?.(15);
+        try { if (est.alTocar) est.alTocar(objeto, { THREE }); else rebote(objeto); } catch (e) { console.warn('alTocar:', e); }
       });
       if (cancelado) return;
       await escena.iniciar();
