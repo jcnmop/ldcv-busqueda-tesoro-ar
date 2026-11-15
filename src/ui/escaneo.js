@@ -63,7 +63,17 @@ export function pantallaEscaneo(raiz, ctx) {
     }
   }, 12000);
 
-  (async () => {
+  // MODO DEMO (?demo en la URL): sin cámara ni marcador, para probar minijuegos en una
+  // computadora o verificar estaciones antes del evento. No usar el día de la competencia.
+  const modoDemo = new URLSearchParams(location.search).has('demo');
+  if (modoDemo) {
+    clearTimeout(temporizadorAyuda);
+    arContainer.style.background = '#1e3a5f';
+    msg.innerHTML = h`<strong>Modo demo</strong>: se omite la cámara. Estación: ${est.nombre}.`;
+    btnJugar.hidden = false;
+  }
+
+  if (!modoDemo) (async () => {
     try {
       const { crearEscena, THREE } = await import('../ar/escena.js');
       const objeto = est.crearObjeto(THREE);

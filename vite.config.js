@@ -20,10 +20,13 @@ function externosPorImportmap() {
   };
 }
 
+// SIN_HTTPS=1 → servidor http simple (suficiente en localhost, donde la cámara también funciona).
+const sinHttps = !!process.env.SIN_HTTPS;
+
 export default defineConfig({
-  plugins: [externosPorImportmap(), mkcert()],
+  plugins: [externosPorImportmap(), ...(sinHttps ? [] : [mkcert()])],
   server: {
-    https: true,
+    https: !sinHttps,
     port: 5173,
   },
   build: {
