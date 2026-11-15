@@ -7,7 +7,7 @@ import { crearAlmacen, terminada } from './core/estado.js';
 import { crearRouter } from './core/router.js';
 import { obtenerBackend } from './core/backend/index.js';
 import { crearSincronizador } from './core/sincronizador.js';
-import { pantallaRegistro } from './ui/registro.js';
+import { pantallaBienvenida } from './ui/bienvenida.js';
 import { pantallaPista } from './ui/pista.js';
 import { pantallaFinal } from './ui/final.js';
 
@@ -27,7 +27,7 @@ const router = crearRouter(document.getElementById('app'), { almacen, estaciones
 crearSincronizador(almacen, obtenerBackend).sincronizar();
 
 const estado = almacen.get();
-if (!estado.equipoId) router.ir(pantallaRegistro);
+if (!estado.equipoId) router.ir(pantallaBienvenida);
 else if (terminada(estado)) router.ir(pantallaFinal);
 else router.ir(pantallaPista);
 

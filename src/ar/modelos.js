@@ -73,13 +73,15 @@ export function cargarGLB(THREE, url, { altura, escala = 1, acostar = true, anim
         const m = gltf.scene;
         if (acostar) m.rotation.x = Math.PI / 2;
         if (altura) {
+          // Eje "arriba": Z si se acostó para la RA, Y si se usa en una vista 3D normal
+          const eje = acostar ? 'z' : 'y';
           m.updateMatrixWorld(true);
           const caja = new THREE.Box3().setFromObject(m);
-          const alto = caja.max.z - caja.min.z || caja.max.y - caja.min.y || 1;
+          const alto = (caja.max[eje] - caja.min[eje]) || 1;
           m.scale.multiplyScalar(altura / alto);
           m.updateMatrixWorld(true);
           const caja2 = new THREE.Box3().setFromObject(m);
-          m.position.z -= caja2.min.z; // apoyar en el plano del marcador
+          m.position[eje] -= caja2.min[eje]; // apoyar la base en 0
         } else {
           m.scale.multiplyScalar(escala);
         }

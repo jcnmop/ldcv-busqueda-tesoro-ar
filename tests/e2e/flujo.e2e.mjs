@@ -96,6 +96,9 @@ async function abrirNavegador(video) {
     const rel = route.request().url().match(/dist\/(.*)$/)[1];
     route.fulfill({ path: resolve(vendor.mindar, rel), contentType: 'text/javascript' });
   });
+  await ctx.route(/cdn\.jsdelivr\.net\/npm\/@google\/model-viewer@[^/]+\/dist\/(.*)/, (route) => {
+    route.fulfill({ path: resolve(raiz, 'tools/.vendor/model-viewer/dist/model-viewer.min.js'), contentType: 'text/javascript' });
+  });
   const page = await ctx.newPage();
   page.on('pageerror', (e) => console.error('  [pageerror]', e.message));
   page.on('console', (m) => { if (m.type() === 'error') console.error('  [console]', m.text()); });
@@ -106,6 +109,13 @@ async function abrirNavegador(video) {
 {
   const { nav, page } = await abrirNavegador(videoDeMarcador(estadoSemilla.ruta[0]));
   await page.goto(base + '/');
+  await page.waitForSelector('#comenzar');
+  ok((await page.textContent('body')).includes('Creado por Juan Carlos Navarrete'), 'Bienvenida con crédito del autor');
+  await page.waitForFunction(() => globalThis.__avatar?.userData?.animaciones?.length > 0, null, { timeout: 30000 });
+  await page.waitForTimeout(1200);
+  await page.screenshot({ path: resolve(tmp, 'bienvenida.png') });
+  ok(true, 'Avatar 3D animado en la bienvenida');
+  await page.click('#comenzar');
   await page.fill('#nombre', 'Los Voladizos');
   await page.click('#empezar');
   await page.waitForSelector('#escanear');
@@ -169,14 +179,19 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
   await page.waitForTimeout(900);
   ok(await page.$eval('#minijuego', (el) => el.hidden), `${est.nombre}: tocar el objeto solo reacciona (no abre el reto)`);
 
-  // 2) GIRAR con un dedo: arrastre horizontal cambia la rotación del manipulador
-  const rot0 = await page.evaluate(() => globalThis.__escenaRA.manipulador.rotation.z);
-  await page.mouse.move(pObj[0] - 60, pObj[1]); await page.mouse.down();
-  await page.mouse.move(pObj[0] + 60, pObj[1], { steps: 6 }); await page.mouse.up();
-  const rot1 = await page.evaluate(() => globalThis.__escenaRA.manipulador.rotation.z);
-  ok(Math.abs(rot1 - rot0) > 0.5, `${est.nombre}: arrastrar gira el objeto (${(rot1 - rot0).toFixed(2)} rad)`);
-  await page.waitForTimeout(400);
-  await page.screenshot({ path: resolve(tmp, `ar-${id}-girado.png`) });
+  // 2) MOVER con un dedo: arrastrar a la derecha y arriba desplaza el objeto en el plano del póster
+  const pos0 = await page.evaluate(() => globalThis.__escenaRA.manipulador.position.toArray());
+  await page.mouse.move(pObj[0], pObj[1]); await page.mouse.down();
+  await page.mouse.move(pObj[0] + 70, pObj[1] - 50, { steps: 6 }); await page.mouse.up();
+  const pos1 = await page.evaluate(() => globalThis.__escenaRA.manipulador.position.toArray());
+  ok(pos1[0] - pos0[0] > 0.05 && pos1[2] - pos0[2] > 0.03, `${est.nombre}: arrastrar con un dedo mueve el objeto (Δx=${(pos1[0] - pos0[0]).toFixed(2)}, Δarriba=${(pos1[2] - pos0[2]).toFixed(2)})`);
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: resolve(tmp, `ar-${id}-movido.png`) });
+  // Doble toque en zona vacía (arriba del póster) para centrar
+  await page.mouse.dblclick(195, 120);
+  await page.waitForTimeout(200);
+  const pos2 = await page.evaluate(() => globalThis.__escenaRA.manipulador.position.length());
+  ok(pos2 < 1e-6, `${est.nombre}: doble toque vuelve a centrar`);
 
   // 3) ATRAPAR la pieza dorada: abre el reto
   const punto = await proyectar('coleccionable');
@@ -216,16 +231,16 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
     await page.click('#verificar');
   } else if (id === 'clash-bim') {
     // Leer el rango de la viga y los topes de cada elemento del propio SVG, como lo haría un jugador atento
-    const vigaTxt = await page.textContent('#planta text');
+    const vigaTxt = await page.$$eval('#corte text', (ts) => ts.map((t) => t.textContent).find((t) => t.startsWith('VIGA')));
     const vigaZMin = +vigaTxt.match(/VIGA\s*([\d.]+)/)[1];
-    const elementos = await page.$$eval('#planta g[data-id]', (gs) => gs.map((g) => ({ id: g.dataset.id, txt: g.querySelector('text').textContent })));
+    const elementos = await page.$$eval('#corte g[data-id]', (gs) => gs.map((g) => ({ id: g.dataset.id, txt: g.querySelector('text').textContent })));
     const culpable = elementos.find((e) => +e.txt.split('–')[1] > vigaZMin);
     ok(!!culpable, 'Clash: culpable identificado por cotas');
     // Primer toque deliberadamente malo para probar la retroalimentación
     const malo = elementos.find((e) => e.id !== culpable.id);
-    await page.click(`#planta g[data-id="${malo.id}"] rect:nth-of-type(2)`);
+    await page.click(`#corte g[data-id="${malo.id}"] rect:nth-of-type(2)`);
     ok((await page.textContent('#feedback')).includes('por debajo'), 'Clash: retroalimentación del intento fallido');
-    await page.click(`#planta g[data-id="${culpable.id}"] rect:nth-of-type(2)`);
+    await page.click(`#corte g[data-id="${culpable.id}"] rect:nth-of-type(2)`);
   } else if (id === 'ojo-ingeniero') {
     await page.click('#responder');
   } else {
@@ -270,6 +285,14 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
   await page.screenshot({ path: resolve(tmp, 'respuestas.png'), fullPage: true });
 
   // Puente en RA con el póster META
+  await page.click('#ver-libre');
+  await page.waitForFunction(() => globalThis.__puenteLibre?.loaded, null, { timeout: 60000 });
+  await page.waitForTimeout(1500);
+  ok(true, 'Puente exportado a .glb y cargado en model-viewer (RA sin póster)');
+  await page.screenshot({ path: resolve(tmp, 'puente-libre.png') });
+  await page.click('#volver');
+  await page.waitForSelector('#ver-ra');
+
   await page.click('#ver-ra');
   await page.waitForFunction(() => globalThis.__escenaRA?.estaVisible?.(), null, { timeout: 90000 });
   ok(true, 'Póster META reconocido: puente del equipo en RA');

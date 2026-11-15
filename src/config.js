@@ -10,3 +10,20 @@
  *   'nunca'  : no se muestran.
  */
 export const MOSTRAR_RESPUESTAS = 'al-final';
+
+/**
+ * AVATAR DE BIENVENIDA. Para usar el avatar propio: exportar desde Blender un .glb con
+ * animaciones (ej: "Saludo", "Reposo"), copiarlo a public/modelos/ y cambiar estos valores.
+ */
+export const AVATAR = {
+  modelo: 'modelos/robot.glb',     // relativo a la raíz publicada
+  nombre: 'Robi',                  // cómo se presenta el guía
+  animacionSaludo: 'Wave',         // se reproduce al aparecer y al tocarlo
+  animacionReposo: 'Idle',
+  mensaje: '¡Hola! Bienvenidos al Laboratorio de Diseño y Construcción Virtual. '
+    + 'Hoy van a recorrer el campus buscando estaciones con realidad aumentada. '
+    + 'En cada una ganarán una pieza para construir su propio puente. ¿Listos?',
+};
+
+/** Crédito que aparece en pequeño en la bienvenida. */
+export const CREADO_POR = 'Creado por Juan Carlos Navarrete';

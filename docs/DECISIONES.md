@@ -89,3 +89,21 @@ se muestra al instante. `src/config.js → MOSTRAR_RESPUESTAS` ('al-final' | 'si
 ## 2026-11-15 · Póster META para ver el puente del equipo en RA
 **Motivo:** cierre visual del recorrido en la mesa del LDCV. Marcador especial `meta`
 generado por `tools/marcadores.js` (lista EXTRAS), no es una estación.
+
+## 2026-11-15 · Clash en corte transversal
+**Motivo:** la planta con cotas no se entendía en la prueba real. El corte muestra la viga
+y cada instalación a su altura; holguras de 2–10 cm y traslape de 4–15 cm obligan a leer cotas.
+
+## 2026-11-15 · Gestos: 1 dedo mueve, 2 dedos giran/escalan, doble toque centra
+**Motivo:** pedido de mover el objeto en el plano de la pantalla. El desplazamiento en píxeles
+se convierte a unidades del póster proyectando sus ejes (sistema 2×2) en `escena.js`.
+
+## 2026-11-15 · RA sin marcador con <model-viewer> (Google, v4.4.0, CDN)
+**Motivo:** ver el puente "en mi espacio" sin póster. El puente se exporta a .glb en el
+celular (GLTFExporter) y model-viewer abre WebXR (Android) o Quick Look (iPhone, USDZ
+generado al vuelo). **Limitación:** Scene Viewer de Android no acepta blobs, por eso se
+usa `ar-modes="webxr quick-look"`; Android sin soporte WebXR/ARCore solo ve el 3D.
+
+## 2026-11-15 · Bienvenida con avatar configurable
+**Motivo:** presentación del evento. `src/config.js → AVATAR, CREADO_POR`. Robot CC0 como
+marcador de posición hasta tener el avatar propio de Juan Carlos (.glb desde Blender).

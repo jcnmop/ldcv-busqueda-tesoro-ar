@@ -51,8 +51,17 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
       Configurable en `src/config.js`.
 - [x] 33 pruebas unitarias; e2e cubre tocar, girar, atrapar, respuestas y puente en RA.
 
+## Bloque visual 3 (2026-11-15) — hecho
+- [x] Detective de clashes rediseñado como corte transversal con eje de cotas.
+- [x] Gestos: 1 dedo mueve, 2 dedos giran y escalan, doble toque centra.
+- [x] Puente en RA sin póster (`src/ui/puente-libre.js`, model-viewer).
+- [x] Bienvenida con avatar 3D animado, globo de diálogo y "Creado por Juan Carlos Navarrete".
+- [x] e2e cubre bienvenida, mover/centrar, corte del clash y puente sin póster.
+
 ## Pendiente (en orden sugerido)
-- [ ] Probar en celular real el Bloque visual 2 (gestos con dedos reales, pieza dorada, META).
+- [ ] Avatar propio de Juan Carlos: .glb con animaciones → `public/modelos/`, actualizar `AVATAR` en config.
+- [ ] Probar "Ver en mi espacio" en iPhone (Quick Look) y Android (WebXR) reales.
+- [ ] Probar en celular real los gestos nuevos y la pieza dorada.
 - [ ] Marcadores con QR pequeño en una esquina (abrir la app desde el póster).
 - [ ] **Rediseñar las preguntas/retos** para que no se puedan resolver con IA
   (decisión de Juan Carlos: depurarlas después; ligarlas a observación física del sitio).

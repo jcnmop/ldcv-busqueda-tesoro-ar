@@ -94,7 +94,7 @@ export function pantallaEscaneo(raiz, ctx) {
         orientacion: est.orientacion ?? 'pared',
         onEncontrado() {
           if (tocado) return;
-          msg.innerHTML = '<strong>¡Lo encontraron!</strong> Giren el objeto con un dedo y acérquenlo con dos. '
+          msg.innerHTML = '<strong>¡Lo encontraron!</strong> Muévanlo con un dedo; gírenlo y acérquenlo con dos. '
             + '<strong>Atrapen la pieza dorada</strong> para empezar el reto.';
           btnJugar.hidden = false; // alternativa accesible
           navigator.vibrate?.(30);

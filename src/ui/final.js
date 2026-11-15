@@ -3,6 +3,7 @@ import { puntosTotales, resumen } from '../core/estado.js';
 import { piezasDelEquipo, puenteCompleto } from '../core/puente.js';
 import { MOSTRAR_RESPUESTAS } from '../config.js';
 import { pantallaPuenteRA } from './puente-ra.js';
+import { pantallaPuenteLibre } from './puente-libre.js';
 
 /** Bloque HTML con las respuestas correctas de cada estación jugada. */
 export function htmlRespuestas(estado, porId) {
@@ -35,7 +36,8 @@ export function pantallaFinal(raiz, { almacen, porId, obtenerBackend, ir }) {
       <h2>Su puente: ${obtenidas} de ${piezas.length} piezas</h2>
       <div id="puente" style="min-height:240px"></div>
       <p class="muted">${completo ? 'Construyeron el puente completo. ¡Excelente trabajo de equipo!' : 'Las piezas en rojo son retos no superados.'}</p>
-      <button id="ver-ra">Ver mi puente en RA (póster META)</button>
+      <button id="ver-libre">Ver mi puente en RA (en mi espacio)</button>
+      <button id="ver-ra" class="secundario">Ver mi puente sobre el póster META</button>
     </div>
     <div class="tarjeta" id="bloque-respuestas" hidden>
       <h2>Respuestas correctas</h2>
@@ -49,6 +51,7 @@ export function pantallaFinal(raiz, { almacen, porId, obtenerBackend, ir }) {
   `;
 
   raiz.querySelector('#ver-ra').addEventListener('click', () => ir(pantallaPuenteRA, { volver: pantallaFinal }));
+  raiz.querySelector('#ver-libre').addEventListener('click', () => ir(pantallaPuenteLibre, { volver: pantallaFinal }));
   const btnResp = raiz.querySelector('#btn-respuestas');
   const bloqueResp = raiz.querySelector('#bloque-respuestas');
   btnResp.addEventListener('click', () => {

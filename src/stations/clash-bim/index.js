@@ -63,38 +63,61 @@ const estacion = {
   montarMinijuego(contenedor, ctx) {
     const reto = generarReto();
     let intentos = 0;
-    const { area, viga, elementos } = reto;
-    const W = 360, H = 240, esc = W / area.ancho;
-    const X = (m) => m * esc, Y = (m) => H - m * (H / area.alto);
+    const { viga, elementos } = reto;
+
+    // CORTE TRANSVERSAL: eje vertical = cota (m). La viga es una franja horizontal;
+    // cada instalación es un rectángulo a su altura real. Clash = traslape vertical con la viga.
+    const W = 360, H = 300, IZQ = 46, ARR = 16, ABA = 34;
+    const zBajo = Math.floor((Math.min(...elementos.map((e) => e.zMin)) - 0.1) * 10) / 10;
+    const zAlto = Math.ceil((viga.zMax + 0.1) * 10) / 10;
+    const Yz = (z) => ARR + (zAlto - z) * ((H - ARR - ABA) / (zAlto - zBajo));
+    const col = (W - IZQ) / elementos.length;
+    const Xc = (i) => IZQ + col * (i + 0.5);
 
     contenedor.innerHTML = `
       <h2>Detective de clashes</h2>
-      <p>Planta del cielo técnico. La <strong>viga</strong> va de cota
-      <strong>${viga.zMin.toFixed(2)}</strong> a <strong>${viga.zMax.toFixed(2)} m</strong>.
-      Todas las instalaciones la cruzan en planta, pero <strong>solo una</strong> la atraviesa
-      en altura. Toquen la que colisiona.</p>
-      <svg id="planta" viewBox="0 0 ${W} ${H}" width="100%" style="background:#0e2748;border-radius:12px;touch-action:manipulation"></svg>
+      <p><strong>Corte transversal</strong> del cielo técnico. Un <strong>clash</strong> ocurre cuando una
+      instalación ocupa parte del mismo espacio que la <strong>viga</strong>. Todas pasan cerca:
+      lean las cotas con cuidado y <strong>toquen la única que choca</strong>.</p>
+      <svg id="corte" viewBox="0 0 ${W} ${H}" width="100%" style="background:#0e2748;border-radius:12px;touch-action:manipulation"></svg>
       <div id="leyenda" class="muted" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:.85rem"></div>
       <p id="feedback" class="muted"></p>
     `;
-    const svg = contenedor.querySelector('#planta');
+    const svg = contenedor.querySelector('#corte');
     const leyenda = contenedor.querySelector('#leyenda');
     const fb = contenedor.querySelector('#feedback');
 
     const pintar = (marcado = null) => {
+      // Eje de cotas cada 10 cm
+      let eje = '';
+      for (let z = zBajo; z <= zAlto + 1e-9; z = Math.round((z + 0.1) * 10) / 10) {
+        const y = Yz(z);
+        const fuerte = Math.abs(z * 2 - Math.round(z * 2)) < 1e-6; // cada 0.5 m
+        eje += `<line x1="${IZQ}" y1="${y}" x2="${W}" y2="${y}" stroke="#ffffff" stroke-opacity="${fuerte ? 0.18 : 0.07}" />`
+          + `<text x="${IZQ - 6}" y="${y + 3}" fill="#9aa5b1" font-size="10" text-anchor="end">${z.toFixed(1)}</text>`;
+      }
+      const yVigaArr = Yz(viga.zMax), yVigaAba = Yz(viga.zMin);
       svg.innerHTML = `
-        <rect x="0" y="${Y(viga.y1) - 10}" width="${W}" height="20" fill="#f7f7f5" opacity="0.9" />
-        <text x="${W - 6}" y="${Y(viga.y1) + 24}" fill="#f7f7f5" font-size="11" text-anchor="end">VIGA ${viga.zMin.toFixed(2)}–${viga.zMax.toFixed(2)} m</text>
-      ` + elementos.map((e) => {
-        const w = Math.max(8, e.ancho * esc);
+        <defs><pattern id="rayado" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <rect width="8" height="8" fill="#cfd3d8"/><line x1="0" y1="0" x2="0" y2="8" stroke="#9aa5b1" stroke-width="3"/></pattern></defs>
+        ${eje}
+        <rect x="${IZQ}" y="${yVigaArr}" width="${W - IZQ}" height="${yVigaAba - yVigaArr}" fill="url(#rayado)" opacity="0.85" />
+        <line x1="${IZQ}" y1="${yVigaAba}" x2="${W}" y2="${yVigaAba}" stroke="#f2a900" stroke-dasharray="5 4" stroke-width="1.5" />
+        <text x="${W - 6}" y="${yVigaAba - 5}" fill="#0b1f3a" font-size="10" font-weight="700" text-anchor="end">fondo de viga ${viga.zMin.toFixed(2)} m</text>
+        <text x="4" y="${ARR - 4}" fill="#9aa5b1" font-size="10">cota (m)</text>
+        <text x="${W - 6}" y="${yVigaArr + 14}" fill="#0b1f3a" font-size="11" font-weight="700" text-anchor="end">VIGA ${viga.zMin.toFixed(2)}–${viga.zMax.toFixed(2)} m</text>
+      ` + elementos.map((e, i) => {
+        const w = Math.min(col * 0.6, Math.max(14, e.ancho * 90));
+        const y1 = Yz(e.zMax), y2 = Yz(e.zMin);
         const stroke = marcado === e.id ? (marcado === reto.culpableId ? '#2e9e5b' : '#d0453c') : 'transparent';
         return `<g data-id="${e.id}" style="cursor:pointer">
-          <rect x="${X(e.x1) - w / 2}" y="${Y(e.y2)}" width="${w}" height="${Y(e.y1) - Y(e.y2)}" fill="${e.color}" stroke="${stroke}" stroke-width="4" rx="2" />
-          <rect x="${X(e.x1) - 22}" y="${Y(e.y2)}" width="44" height="${Y(e.y1) - Y(e.y2)}" fill="transparent" />
-          <text x="${X(e.x1)}" y="${Y(e.y2) - 4}" fill="${e.color}" font-size="10" text-anchor="middle">${e.zMin.toFixed(2)}–${e.zMax.toFixed(2)}</text>
+          <text x="${Xc(i)}" y="${H - 8}" fill="${e.color}" font-size="10" text-anchor="middle">${e.zMin.toFixed(2)}–${e.zMax.toFixed(2)}</text>
+          <rect x="${Xc(i) - w / 2}" y="${y1}" width="${w}" height="${y2 - y1}" fill="${e.color}" stroke="${stroke}" stroke-width="4" rx="${e.tipo === 'ducto' || e.tipo === 'bandeja' ? 2 : w / 2}" />
+          <text x="${Xc(i)}" y="${y2 + 13}" fill="#f7f7f5" font-size="11" font-weight="700" text-anchor="middle">${i + 1}</text>
+          <rect x="${Xc(i) - col / 2 + 2}" y="${ARR}" width="${col - 4}" height="${H - ARR}" fill="transparent" />
         </g>`;
       }).join('');
-      leyenda.innerHTML = elementos.map((e) => `<span><span style="display:inline-block;width:10px;height:10px;background:${e.color};border-radius:2px;margin-right:6px"></span>${e.nombre}</span>`).join('');
+      leyenda.innerHTML = elementos.map((e, i) => `<span><span style="display:inline-block;width:10px;height:10px;background:${e.color};border-radius:2px;margin-right:6px"></span>${i + 1}. ${e.nombre}</span>`).join('');
     };
 
     const onToque = (ev) => {

@@ -99,7 +99,7 @@ export function pantallaPuenteRA(raiz, { almacen, ir, params }) {
           encontrado = true;
           const n = estados.filter((e) => e.estado === 'obtenida').length;
           msg.innerHTML = completo
-            ? '<strong>¡Puente completo!</strong> Giren con un dedo, acerquen con dos y toquen una pieza para ver su función.'
+            ? '<strong>¡Puente completo!</strong> Muévanlo con un dedo, giren y acerquen con dos, y toquen una pieza para ver su función.'
             : h`<strong>Su puente: ${n} de ${estados.length} piezas.</strong> Las rojas son retos no superados. Toquen una pieza para ver su función.`;
           if (completo) setTimeout(() => { confeti.visible = true; }, 2600);
           navigator.vibrate?.(30);

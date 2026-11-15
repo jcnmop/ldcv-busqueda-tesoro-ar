@@ -84,9 +84,11 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
   };
 
   // ---- Interacción: toques y gestos ----
-  //   1 dedo arrastrando  → girar el objeto sobre su eje vertical
-  //   2 dedos pellizcando → escalar (0.5× a 2.5×)
-  //   toque corto         → raycast: 'coleccionable' (userData.coleccionable en un ancestro) u 'objeto'
+  //   1 dedo arrastrando      → MOVER el objeto en el plano de la pantalla (arriba/abajo/izq/der)
+  //   2 dedos (girar muñeca)  → GIRAR el objeto sobre su eje vertical
+  //   2 dedos (pellizco)      → ESCALAR (0.5× a 2.5×)
+  //   doble toque             → volver a la posición, giro y tamaño originales
+  //   toque corto             → raycast: 'coleccionable' (userData.coleccionable en un ancestro) u 'objeto'
   const raycaster = new THREE.Raycaster();
   const puntero = new THREE.Vector2();
   let oyentesToque = [];
@@ -141,21 +143,46 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
     punteros.set(ev.pointerId, { x: ev.clientX, y: ev.clientY, x0: ev.clientX, y0: ev.clientY, t0: performance.now() });
     if (punteros.size === 2) {
       const [a, b] = [...punteros.values()];
-      pellizcoInicial = { d: Math.hypot(a.x - b.x, a.y - b.y), escala: manipulador.scale.x };
+      pellizcoInicial = { d: Math.hypot(a.x - b.x, a.y - b.y), ang: Math.atan2(b.y - a.y, b.x - a.x), escala: manipulador.scale.x, giro: manipulador.rotation.z };
     }
   };
+
+  // Convierte un desplazamiento en píxeles a unidades del plano del póster (ejes X y "arriba"
+  // del soporte), proyectando los ejes a pantalla y resolviendo el sistema 2×2.
+  const vArriba = new THREE.Vector3(0, 0, 1); // diseño Z-arriba (en 'mesa' se usa Y)
+  function pixelesAPlano(dx, dy) {
+    const soporte = manipulador.parent;
+    const r = renderer.domElement.getBoundingClientRect();
+    const aPx = (v) => { const p = v.clone().project(camera); return [(p.x + 1) / 2 * r.width, (1 - p.y) / 2 * r.height]; };
+    const o = soporte.localToWorld(manipulador.position.clone());
+    const ex = soporte.localToWorld(manipulador.position.clone().add(new THREE.Vector3(1, 0, 0)));
+    const eu = soporte.localToWorld(manipulador.position.clone().add(orientacion === 'pared' ? vArriba : new THREE.Vector3(0, 1, 0)));
+    const [ox, oy] = aPx(o), [xx, xy] = aPx(ex), [ux, uy] = aPx(eu);
+    const a = xx - ox, b = ux - ox, c = xy - oy, d = uy - oy;
+    const det = a * d - b * c;
+    if (Math.abs(det) < 1e-6) return [0, 0];
+    return [(d * dx - b * dy) / det, (-c * dx + a * dy) / det];
+  }
+  const LIMITE = 1.2;
+  let ultimoToqueMs = 0;
   const alMover = (ev) => {
     const p = punteros.get(ev.pointerId);
     if (!p) return;
-    const dx = ev.clientX - p.x;
+    const dx = ev.clientX - p.x, dy = ev.clientY - p.y;
     p.x = ev.clientX; p.y = ev.clientY;
-    if (punteros.size === 1) {
-      manipulador.rotation.z += dx * 0.012; // girar sobre el eje vertical del objeto
+    if (punteros.size === 1 && !pellizcoInicial) {
+      // Mover en el plano del póster siguiendo el dedo
+      const [mx, mu] = pixelesAPlano(dx, dy);
+      manipulador.position.x = Math.max(-LIMITE, Math.min(LIMITE, manipulador.position.x + mx));
+      if (orientacion === 'pared') manipulador.position.z = Math.max(-LIMITE, Math.min(LIMITE, manipulador.position.z + mu));
+      else manipulador.position.y = Math.max(-LIMITE, Math.min(LIMITE, manipulador.position.y + mu));
     } else if (punteros.size === 2 && pellizcoInicial) {
       const [a, b] = [...punteros.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
       const s = Math.min(2.5, Math.max(0.5, pellizcoInicial.escala * (d / pellizcoInicial.d)));
       manipulador.scale.setScalar(s);
+      const ang = Math.atan2(b.y - a.y, b.x - a.x);
+      manipulador.rotation.z = pellizcoInicial.giro - (ang - pellizcoInicial.ang);
     }
   };
   const alSubir = (ev) => {
@@ -165,7 +192,15 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
       && Math.hypot(ev.clientX - p.x0, ev.clientY - p.y0) < 12 && performance.now() - p.t0 < 600;
     punteros.delete(ev.pointerId);
     if (punteros.size < 2) pellizcoInicial = null;
-    if (fueToque && visible && oyentesToque.length) resolverToque(ev.clientX, ev.clientY);
+    if (!fueToque || !visible) return;
+    const ahora = performance.now();
+    if (ahora - ultimoToqueMs < 320) { // doble toque: centrar
+      manipulador.position.set(0, 0, 0); manipulador.rotation.set(0, 0, 0); manipulador.scale.setScalar(1);
+      ultimoToqueMs = 0;
+      return;
+    }
+    ultimoToqueMs = ahora;
+    if (oyentesToque.length) resolverToque(ev.clientX, ev.clientY);
   };
   contenedor.addEventListener('pointerdown', alBajar);
   contenedor.addEventListener('pointermove', alMover);
@@ -182,6 +217,8 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
     /** Registra una función (dt en segundos) que corre en cada cuadro. */
     enCadaCuadro(fn) { animaciones.push(fn); return () => { animaciones = animaciones.filter((f) => f !== fn); }; },
     manipulador,
+    /** Vuelve el objeto a su posición, giro y tamaño originales. */
+    centrar() { manipulador.position.set(0, 0, 0); manipulador.rotation.set(0, 0, 0); manipulador.scale.setScalar(1); },
     /** Registra fn(tipo, intersección|null, objeto|null); tipo = 'coleccionable' | 'objeto'. */
     alTocar(fn) { oyentesToque.push(fn); return () => { oyentesToque = oyentesToque.filter((f) => f !== fn); }; },
     async iniciar() {

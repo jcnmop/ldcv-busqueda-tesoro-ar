@@ -32,11 +32,11 @@ export function generarReto(aleatorio = Math.random) {
     const x = 1 + (i + 0.5) * ((AREA.ancho - 2) / n) + (aleatorio() - 0.5) * 0.6;
     let zMax;
     if (i === culpable) {
-      // invade la viga: su tope queda dentro del rango de la viga
-      zMax = vigaZMin + 0.05 + aleatorio() * (vigaZMax - vigaZMin - 0.1);
+      // invade la viga entre 4 y 15 cm: se nota leyendo cotas, no a simple vista
+      zMax = vigaZMin + 0.04 + aleatorio() * 0.11;
     } else {
-      // pasa por debajo con holgura de al menos 5 cm
-      zMax = vigaZMin - 0.05 - aleatorio() * 0.4;
+      // pasa por debajo con holgura pequeña (2 a 10 cm): obliga a leer las cotas con cuidado
+      zMax = vigaZMin - 0.02 - aleatorio() * 0.08;
     }
     const espesor = t.tipo === 'ducto' ? 0.4 : t.ancho;
     return { id: `e${i}`, ...t, x1: x, y1: 0.3, x2: x, y2: AREA.alto - 0.3, zMin: +(zMax - espesor).toFixed(2), zMax: +zMax.toFixed(2) };
