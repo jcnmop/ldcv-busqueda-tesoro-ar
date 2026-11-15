@@ -28,8 +28,9 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 - [x] Docs: MARCADORES, MODELOS, SUPABASE, PUBLICAR.
 
 ## Pendiente (en orden sugerido)
-- [ ] **Push a GitHub** (requiere que Juan Carlos cree el repo y vincule GitHub en claude.ai).
-  Luego Settings → Pages → Source: GitHub Actions. Ver docs/PUBLICAR.md.
+- [x] **Repositorio en GitHub**: https://github.com/jcnmop/ldcv-busqueda-tesoro-ar
+- [x] **Publicado en GitHub Pages**: https://jcnmop.github.io/ldcv-busqueda-tesoro-ar/
+  (se republica solo en cada push a main). QR en `public/qr-inicio.png`.
 - [ ] **Primera prueba en celular real** (`npm run dev`, URL de red, marcador en pantalla o
   impreso). Lo que NO se pudo validar aquí y hay que mirar en el teléfono:
   - escala y posición de los objetos 3D sobre el marcador (ajustar tamaños en `crearObjeto`);
