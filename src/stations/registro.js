@@ -9,10 +9,14 @@
 import { validarEstacion } from './contrato.js';
 import vigaEquilibrio from './viga-equilibrio/index.js';
 import secuenciaConstructiva from './secuencia-constructiva/index.js';
+import clashBim from './clash-bim/index.js';
+import ojoIngeniero from './ojo-ingeniero/index.js';
 
 const ESTACIONES = [
   vigaEquilibrio,
   secuenciaConstructiva,
+  clashBim,
+  ojoIngeniero,
 ];
 
 // Validación al cargar: falla ruidosamente en desarrollo si algo no cumple el contrato.

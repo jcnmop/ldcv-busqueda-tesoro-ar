@@ -162,6 +162,20 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
       await page.click(`#lista li[data-i="${pos}"]`);
     }
     await page.click('#verificar');
+  } else if (id === 'clash-bim') {
+    // Leer el rango de la viga y los topes de cada elemento del propio SVG, como lo haría un jugador atento
+    const vigaTxt = await page.textContent('#planta text');
+    const vigaZMin = +vigaTxt.match(/VIGA\s*([\d.]+)/)[1];
+    const elementos = await page.$$eval('#planta g[data-id]', (gs) => gs.map((g) => ({ id: g.dataset.id, txt: g.querySelector('text').textContent })));
+    const culpable = elementos.find((e) => +e.txt.split('–')[1] > vigaZMin);
+    ok(!!culpable, 'Clash: culpable identificado por cotas');
+    // Primer toque deliberadamente malo para probar la retroalimentación
+    const malo = elementos.find((e) => e.id !== culpable.id);
+    await page.click(`#planta g[data-id="${malo.id}"] rect:nth-of-type(2)`);
+    ok((await page.textContent('#feedback')).includes('por debajo'), 'Clash: retroalimentación del intento fallido');
+    await page.click(`#planta g[data-id="${culpable.id}"] rect:nth-of-type(2)`);
+  } else if (id === 'ojo-ingeniero') {
+    await page.click('#responder');
   } else {
     await page.click('#resolver'); // plantilla u otras estaciones triviales
   }
@@ -170,7 +184,8 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
   const h1 = await page.textContent('h1');
   ok(h1.includes('completada'), `${est.nombre}: minijuego resuelto → pantalla de resultado`);
   const pts = +(await page.textContent('.tarjeta p')).match(/\+(\d+)/)[1];
-  ok(pts > 0, `${est.nombre}: +${pts} pts`);
+  // Ojo de Ingeniero puntúa por error de estimación: la prueba responde a ciegas y puede sacar 0 legítimamente
+  ok(id === 'ojo-ingeniero' ? pts >= 0 : pts > 0, `${est.nombre}: +${pts} pts`);
   await page.click('#seguir');
   await page.waitForTimeout(300);
   estadoActual = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), CLAVE_STORAGE);

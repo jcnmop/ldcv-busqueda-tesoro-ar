@@ -67,3 +67,37 @@ test('secuencia: puntaje completo vs parcial', () => {
   const parcial = secuencia.calcularPuntaje({ completado: false, aciertos: 3, intentos: 2, detalle: { total: 6 } }, 0);
   assert.equal(parcial, 50);
 });
+
+// ---- clash-bim y ojo-ingeniero ----
+import clash from '../src/stations/clash-bim/index.js';
+import ojo from '../src/stations/ojo-ingeniero/index.js';
+import * as clashLogica from '../src/stations/clash-bim/logica.js';
+
+test('clash-bim y ojo-ingeniero cumplen el contrato', () => {
+  assert.deepEqual(validarEstacion(clash), []);
+  assert.deepEqual(validarEstacion(ojo), []);
+});
+
+test('clash: exactamente un elemento colisiona y es el culpable', () => {
+  const r = rngFijo(3);
+  for (let i = 0; i < 200; i++) {
+    const reto = clashLogica.generarReto(r);
+    const chocan = reto.elementos.filter((e) => clashLogica.colisiona(e, reto.viga));
+    assert.equal(chocan.length, 1, JSON.stringify(reto));
+    assert.equal(chocan[0].id, reto.culpableId);
+    assert.equal(clashLogica.evaluar(reto, reto.culpableId).correcto, true);
+  }
+});
+
+test('clash: puntaje penaliza el segundo intento', () => {
+  assert.equal(clash.calcularPuntaje({ completado: true, intentos: 1 }, 0), 100);
+  assert.equal(clash.calcularPuntaje({ completado: true, intentos: 2 }, 0), 75);
+  assert.equal(clash.calcularPuntaje({ completado: false, intentos: 2 }, 0), 0);
+});
+
+test('ojo: puntaje por error porcentual', () => {
+  assert.equal(ojo.calcularPuntaje({ detalle: { errorPct: 0 } }), 100);
+  assert.equal(ojo.calcularPuntaje({ detalle: { errorPct: 15 } }), 50);
+  assert.equal(ojo.calcularPuntaje({ detalle: { errorPct: 45 } }), 0);
+  assert.equal(ojo.calcularPuntaje({}), 0);
+});

@@ -5,12 +5,13 @@
 
 ## Última actualización
 2026-11-14 · Sesión inicial con Claude Fable 5.1. Bloques 1–3 completos; la app es
-jugable de punta a punta con dos estaciones reales.
+jugable de punta a punta con CUATRO estaciones reales: viga-equilibrio,
+secuencia-constructiva, clash-bim y ojo-ingeniero.
 
 ## Verificación hecha en esta sesión
-- `npm test`: 23 pruebas unitarias pasan.
+- `npm test`: 27 pruebas unitarias pasan.
 - `npm run e2e`: Chrome sin ventana con cámara falsa reconoce ambos marcadores `.mind`
-  reales en ~2,5 s, resuelve los dos minijuegos, llega a la pantalla final y el tablero
+  reales en ~2,5 s, resuelve los cuatro minijuegos, llega a la pantalla final y el tablero
   muestra al equipo. Capturas en `tools/.e2e/*.png` (ignoradas por git).
 - `npm run build` y build con `--base=/<repo>/` para GitHub Pages: correctos.
 - QR de inicio verificado por decodificación con OpenCV.
@@ -20,7 +21,8 @@ jugable de punta a punta con dos estaciones reales.
 - [x] **Bloque 2 — Núcleo del juego**: estado con persistencia, backend local/Supabase,
   sincronizador con reintentos, router, pantallas completas, tablero en vivo.
 - [x] **Bloque 3 — Estaciones reales y RA**: `ar/escena.js`, `ar/modelos.js`,
-  estaciones `viga-equilibrio` y `secuencia-constructiva` con lógica pura probada,
+  estaciones `viga-equilibrio`, `secuencia-constructiva`, `clash-bim` y `ojo-ingeniero`
+  (las tres primeras con lógica pura probada),
   generación e impresión de marcadores, compilación automática de `.mind`, prueba e2e.
 - [x] Herramientas: `npm run rutas`, `npm run qr`, flujo de GitHub Pages.
 - [x] Docs: MARCADORES, MODELOS, SUPABASE, PUBLICAR.
@@ -34,9 +36,11 @@ jugable de punta a punta con dos estaciones reales.
   - estabilidad del anclaje con la mano temblando (`filterMinCF`/`filterBeta` en escena.js);
   - rendimiento en gama media y consumo de batería;
   - que el overlay (botón Jugar) quede sobre el video en iOS Safari.
-- [ ] **Más estaciones** (copiar `_plantilla/`). Ideas ya conversadas: clash en modelo BIM
-  (cargar un `.glb` del lab con `cargarGLB`), estimar altura de un edificio real del campus
-  ("Ojo de Ingeniero"), identificar el instrumento topográfico, lectura de plano.
+- [ ] **Configurar `ojo-ingeniero`**: reemplazar `MAGNITUDES` por valores medidos por el LDCV
+  en los puntos reales (P40/BLK360).
+- [ ] **Más estaciones** si se quieren 5–6 (copiar `_plantilla/`). Ideas: identificar el
+  instrumento topográfico, lectura de plano, nube de puntos vs. modelo (usar un `.glb` real
+  del lab con `cargarGLB`).
 - [ ] Reemplazar los marcadores generados por diseños propios del LDCV si se desea
   (ver docs/MARCADORES.md); recompilar con `npm run marcadores:compilar`.
 - [ ] Decidir y configurar **Supabase** (docs/SUPABASE.md) o quedarse en local.
@@ -54,7 +58,7 @@ jugable de punta a punta con dos estaciones reales.
 ```bash
 git clone <repo> && cd ldcv-busqueda-tesoro-ar
 npm install
-npm test                      # debe dar 23/23
+npm test                      # debe dar 27/27
 npm run dev                   # abrir la URL de red en el celular (https)
 # opcional, para la prueba automática de RA (requiere Chrome y ffmpeg):
 npm run marcadores:compilar && npm run e2e

@@ -45,8 +45,10 @@ src/
     contrato.js            EL CONTRATO. Leer antes de crear una estación.
     registro.js            Lista de estaciones activas (único lugar)
     _plantilla/            Copiar para crear una estación nueva
-    viga-equilibrio/       Estación real 1 (index.js + logica.js pura y probada)
-    secuencia-constructiva/ Estación real 2
+    viga-equilibrio/       Estación real (index.js = DOM/3D, logica.js = pura y probada)
+    secuencia-constructiva/
+    clash-bim/
+    ojo-ingeniero/         Magnitudes reales a configurar por el organizador
   ui/                      Pantallas: registro, pista, escaneo (RA + minijuego), resultado, final
   styles/base.css
 public/
