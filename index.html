@@ -6,13 +6,31 @@
   <meta name="theme-color" content="#0b1f3a" />
   <title>Búsqueda del Tesoro AR · LDCV</title>
   <link rel="stylesheet" href="/src/styles/base.css" />
+
+  <!--
+    Three.js y MindAR vienen de CDN (ver docs/DECISIONES.md).
+    IMPORTANTE: mantener la misma versión de three en las tres entradas, y no
+    instalar three por npm: habría dos copias y MindAR dejaría de funcionar.
+  -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+      "mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+    }
+  }
+  </script>
 </head>
 <body>
-  <!-- Pantalla activa. El router de src/core/router.js reemplaza su contenido. -->
+  <!-- Pantalla activa. src/core/router.js reemplaza su contenido. -->
   <main id="app" aria-live="polite"></main>
 
-  <!-- Contenedor de la cámara/RA. Se muestra solo durante la fase de escaneo. -->
+  <!-- Cámara + RA. Solo visible durante la fase de escaneo. -->
   <div id="ar-container" hidden></div>
+
+  <!-- Minijuego activo. Solo visible mientras se juega. -->
+  <div id="minijuego" class="minijuego" hidden></div>
 
   <script type="module" src="/src/main.js"></script>
 </body>

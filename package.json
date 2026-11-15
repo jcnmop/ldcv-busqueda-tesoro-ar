@@ -8,11 +8,9 @@
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview --host",
-    "test": "node --test tests/*.test.js"
-  },
-  "dependencies": {
-    "three": "^0.170.0",
-    "mind-ar": "^1.2.5"
+    "test": "node --test tests/*.test.js",
+    "rutas": "node tools/rutas.js",
+    "qr": "node tools/qr.js"
   },
   "devDependencies": {
     "vite": "^6.0.0",
