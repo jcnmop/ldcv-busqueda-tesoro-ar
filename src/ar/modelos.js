@@ -10,33 +10,117 @@
  */
 
 /**
+ * Carga un .glb y lo devuelve dentro de un Group (síncrono; el modelo aparece al cargar).
+ *
+ * ANIMACIONES: si el .glb trae animaciones, el grupo expone en `userData`:
+ *   - actualizar(dt)                    lo llama la escena en cada cuadro (no tocar)
+ *   - reproducir(nombre, { unaVez, luego })  cambia de animación con transición suave;
+ *         unaVez=true la corre una sola vez y luego vuelve a `luego` (o a la inicial)
+ *   - animaciones                       lista de nombres disponibles
+ *   - listo                             Promise que resuelve cuando el modelo cargó
+ *
  * @param {typeof import('three')} THREE
- * @param {string} url            ej: `${import.meta.env.BASE_URL}modelos/viga.glb`
+ * @param {string} url            ej: `${import.meta.env.BASE_URL}modelos/robot.glb`
  * @param {object} [op]
- * @param {number} [op.escala=1]   el marcador mide 1 unidad de ancho
- * @param {boolean} [op.acostar=true]  rota -90° en X para que "+Y arriba" de Blender
+ * @param {number} [op.altura]     normaliza el modelo a esta altura (unidades de marcador = 1 de ancho).
+ *                                 Recomendado: evita adivinar la escala de cada .glb.
+ * @param {number} [op.escala=1]   escala fija (se ignora si se da `altura`)
+ * @param {boolean} [op.acostar=true]  rota 90° en X para que "+Y arriba" de Blender
  *                                     quede "+Z arriba" sobre el plano del marcador
+ * @param {string} [op.animacion]  animación en bucle al aparecer (ej: "Idle")
+ * @param {string} [op.entrada]    animación de una sola vez al detectar el marcador (ej: "Wave")
  */
-export function cargarGLB(THREE, url, { escala = 1, acostar = true } = {}) {
+export function cargarGLB(THREE, url, { altura, escala = 1, acostar = true, animacion, entrada } = {}) {
   const grupo = new THREE.Group();
   const indicador = indicadorCarga(THREE);
   grupo.add(indicador);
 
-  import('three/addons/loaders/GLTFLoader.js').then(({ GLTFLoader }) => {
+  let mixer = null;
+  const acciones = {};
+  let actual = null;
+  let base = animacion;
+
+  function reproducir(nombre, { unaVez = false, luego } = {}) {
+    const accion = acciones[nombre];
+    if (!accion) return false;
+    if (actual && actual !== accion) actual.fadeOut(0.25);
+    accion.reset();
+    accion.setLoop(unaVez ? THREE.LoopOnce : THREE.LoopRepeat, Infinity);
+    accion.clampWhenFinished = unaVez;
+    accion.fadeIn(0.25).play();
+    actual = accion;
+    if (unaVez) {
+      const volverA = luego ?? base;
+      const alTerminar = (e) => {
+        if (e.action !== accion) return;
+        mixer.removeEventListener('finished', alTerminar);
+        if (volverA) reproducir(volverA);
+      };
+      mixer.addEventListener('finished', alTerminar);
+    }
+    return true;
+  }
+
+  grupo.userData.reproducir = (n, op) => reproducir(n, op);
+  grupo.userData.animaciones = [];
+  grupo.userData.actualizar = (dt) => mixer?.update(dt);
+
+  grupo.userData.listo = import('three/addons/loaders/GLTFLoader.js').then(({ GLTFLoader }) => new Promise((ok, mal) => {
     new GLTFLoader().load(
       url,
       (gltf) => {
         grupo.remove(indicador);
         const m = gltf.scene;
-        m.scale.setScalar(escala);
         if (acostar) m.rotation.x = Math.PI / 2;
+        if (altura) {
+          m.updateMatrixWorld(true);
+          const caja = new THREE.Box3().setFromObject(m);
+          const alto = caja.max.z - caja.min.z || caja.max.y - caja.min.y || 1;
+          m.scale.multiplyScalar(altura / alto);
+          m.updateMatrixWorld(true);
+          const caja2 = new THREE.Box3().setFromObject(m);
+          m.position.z -= caja2.min.z; // apoyar en el plano del marcador
+        } else {
+          m.scale.multiplyScalar(escala);
+        }
         grupo.add(m);
+
+        if (gltf.animations?.length) {
+          mixer = new THREE.AnimationMixer(m);
+          for (const clip of gltf.animations) acciones[clip.name] = mixer.clipAction(clip);
+          grupo.userData.animaciones = Object.keys(acciones);
+          if (base && !acciones[base]) base = undefined;
+          if (base) reproducir(base);
+        }
+        ok(grupo);
       },
       undefined,
-      (err) => console.error('[glb] no se pudo cargar', url, err),
+      (err) => { console.error('[glb] no se pudo cargar', url, err); mal(err); },
     );
-  });
+  }));
+
+  // Animación de entrada cuando la escena avisa que se encontró el marcador
+  grupo.userData.alEncontrar = () => {
+    if (entrada) grupo.userData.listo.then(() => reproducir(entrada, { unaVez: true }));
+  };
   return grupo;
+}
+
+/**
+ * Reacción genérica al tocar un objeto en RA (si la estación no define la suya):
+ * un rebote rápido de escala. Devuelve una función de actualización por cuadro.
+ */
+export function rebote(objeto, { duracion = 0.45, amplitud = 0.25 } = {}) {
+  const escalaBase = objeto.userData.escalaBase ?? objeto.scale.x;
+  objeto.userData.escalaBase = escalaBase;
+  let t = 0;
+  objeto.userData.efecto = (dt) => {
+    t += dt;
+    const p = Math.min(t / duracion, 1);
+    const s = escalaBase * (1 + amplitud * Math.sin(p * Math.PI) * (1 - p * 0.5));
+    objeto.scale.setScalar(s);
+    if (p >= 1) { objeto.scale.setScalar(escalaBase); objeto.userData.efecto = null; }
+  };
 }
 
 /** Anillo que gira mientras carga un modelo. */

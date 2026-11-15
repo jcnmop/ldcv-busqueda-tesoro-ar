@@ -23,7 +23,7 @@ export function pantallaPista(raiz, { almacen, porId, ir }) {
     ${''}
     <h1>Estación ${numero} de ${estado.ruta.length}</h1>
     <div class="tarjeta">
-      <h2>Pista</h2>
+      <h2>${est?.nombre ?? 'Estación'}</h2>
       <p>${est?.pista ?? 'Estación no encontrada en el registro.'}</p>
     </div>
     <p class="muted">Cuando lleguen al punto, toquen el botón y apunten la cámara al marcador.</p>

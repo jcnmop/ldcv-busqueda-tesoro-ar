@@ -129,10 +129,41 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
   const t0 = Date.now();
   await page.waitForSelector('#jugar:not([hidden])', { timeout: 90000 });
   ok(true, `${est.nombre}: MindAR reconoció el marcador en ${((Date.now() - t0) / 1000).toFixed(1)} s`);
-  await page.waitForTimeout(800); // dejar que el objeto se asiente sobre el marcador
+  // Esperar a que los modelos .glb (si hay) terminen de cargar
+  await page.waitForFunction(() => {
+    const e = globalThis.__escenaRA; if (!e) return false;
+    let pendiente = false;
+    e.ancla.group.traverse((o) => { if (o.userData?.listo && !o.userData.__ok) { pendiente = true; o.userData.listo.then(() => { o.userData.__ok = true; }); } });
+    return !pendiente;
+  }, null, { timeout: 30000 });
+  await page.waitForTimeout(1200); // dejar que el objeto se asiente y corra la animación de entrada
   await page.screenshot({ path: resolve(tmp, `ar-${id}.png`) });
-  await page.click('#jugar');
-  await page.waitForSelector('#minijuego:not([hidden])');
+
+  const animaciones = await page.evaluate(() => {
+    const n = []; globalThis.__escenaRA.ancla.group.traverse((o) => { if (o.userData?.animaciones?.length) n.push(...o.userData.animaciones); }); return n;
+  });
+  if (id === 'ojo-ingeniero') ok(animaciones.includes('Wave') && animaciones.includes('Jump'), `Robot animado cargado (${animaciones.length} animaciones)`);
+
+  // TOCAR EL OBJETO 3D: proyectar el centro de su caja envolvente a coordenadas de pantalla
+  const punto = await page.evaluate(() => {
+    const { THREE, camera, renderer, ancla } = globalThis.__escenaRA;
+    const centro = new THREE.Box3().setFromObject(ancla.group).getCenter(new THREE.Vector3());
+    const v = centro.project(camera);
+    const r = renderer.domElement.getBoundingClientRect();
+    return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
+  });
+  console.log('  punto de toque:', punto.map(Math.round).join(','), await page.evaluate(([x, y]) => {
+    const { THREE, camera, renderer, ancla, estaVisible } = globalThis.__escenaRA;
+    const r = renderer.domElement.getBoundingClientRect();
+    const rc = new THREE.Raycaster();
+    rc.setFromCamera(new THREE.Vector2(((x - r.left) / r.width) * 2 - 1, -((y - r.top) / r.height) * 2 + 1), camera);
+    const el = document.elementFromPoint(x, y);
+    return JSON.stringify({ hits: rc.intersectObject(ancla.group, true).length, visible: estaVisible(), el: el?.tagName + '.' + el?.className, canvas: [r.left, r.top, r.width, r.height].map(Math.round) });
+  }, punto));
+  await page.screenshot({ path: resolve(tmp, `toque-${id}.png`) });
+  await page.mouse.click(punto[0], punto[1]);
+  await page.waitForSelector('#minijuego:not([hidden])', { timeout: 6000 });
+  ok(true, `${est.nombre}: tocar el objeto 3D abre el reto`);
   await page.screenshot({ path: resolve(tmp, `minijuego-${id}.png`) });
   await page.waitForSelector('#minijuego:not([hidden])');
 
@@ -182,10 +213,14 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
 
   await page.waitForSelector('#seguir', { timeout: 10000 });
   const h1 = await page.textContent('h1');
-  ok(h1.includes('completada'), `${est.nombre}: minijuego resuelto → pantalla de resultado`);
+  // Ojo de Ingeniero depende de la estimación a ciegas de la prueba: puede no superarse
+  ok(h1.includes('completada') || (id === 'ojo-ingeniero' && h1.includes('no superado')), `${est.nombre}: minijuego resuelto → pantalla de resultado`);
   const pts = +(await page.textContent('.tarjeta p')).match(/\+(\d+)/)[1];
   // Ojo de Ingeniero puntúa por error de estimación: la prueba responde a ciegas y puede sacar 0 legítimamente
   ok(id === 'ojo-ingeniero' ? pts >= 0 : pts > 0, `${est.nombre}: +${pts} pts`);
+  await page.waitForSelector('#puente canvas', { timeout: 15000 });
+  ok(true, `${est.nombre}: pieza del puente mostrada`);
+  if (i === 1) { await page.waitForTimeout(1200); await page.screenshot({ path: resolve(tmp, 'resultado-puente.png') }); }
   await page.click('#seguir');
   await page.waitForTimeout(300);
   estadoActual = await page.evaluate((k) => JSON.parse(localStorage.getItem(k)), CLAVE_STORAGE);
@@ -199,7 +234,11 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
   await page.addInitScript(([k, v]) => localStorage.setItem(k, v), [CLAVE_STORAGE, JSON.stringify({ ...estadoActual, sincronizado: false })]);
   await page.goto(base + '/');
   await page.waitForSelector('#detalle');
-  ok((await page.textContent('h1')).includes('completo'), 'Pantalla final');
+  ok(/completo|terminado/.test(await page.textContent('h1')), 'Pantalla final');
+  await page.waitForSelector('#puente canvas', { timeout: 15000 });
+  await page.waitForTimeout(1500);
+  ok(true, 'Puente 3D dibujado en la pantalla final');
+  await page.screenshot({ path: resolve(tmp, 'final-puente.png'), fullPage: true });
   await page.waitForFunction(() => /enviado/.test(document.querySelector('#sync')?.textContent || ''), null, { timeout: 5000 });
   ok(true, 'Sincronizado con backend local');
   await page.goto(base + '/tablero.html');

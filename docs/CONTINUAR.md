@@ -31,10 +31,19 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 - [x] Herramientas: `npm run rutas`, `npm run qr`, flujo de GitHub Pages.
 - [x] Docs: MARCADORES, MODELOS, SUPABASE, PUBLICAR.
 
+## Bloque visual 1 (2026-11-15) — hecho
+- [x] `cargarGLB` con animaciones (`animacion` en bucle, `entrada` al detectar, `reproducir()`),
+      normalización por `altura`. Robot CC0 en `public/modelos/robot.glb` usado en ojo-ingeniero.
+- [x] Tocar el objeto 3D abre el reto (raycast + toque tolerante). `alTocar` opcional en el contrato.
+- [x] Orientación 'pared' por defecto (objetos de pie frente al póster).
+- [x] Puente coleccionable: `src/core/puente.js` (lógica probada) + `src/ui/puente3d.js` (visor);
+      pieza en la pantalla de resultado y puente completo en la final.
+- [x] Nombre de la estación en la pista; ancho máximo 520 px en computadora.
+- [x] 31 pruebas unitarias; e2e toca el objeto 3D en las 4 estaciones.
+
 ## Pendiente (en orden sugerido)
-- [ ] **Ajustes detectados en la prueba real**:
-  - Mostrar el NOMBRE de la estación junto a la pista (el jugador no sabía qué marcador buscar).
-  - Limitar el ancho de la app en computadora (max-width ~480 px centrado).
+- [ ] Probar en celular real el Bloque visual 1 (robot, toque, puente).
+- [ ] Marcadores con QR pequeño en una esquina (abrir la app desde el póster).
 - [ ] **Rediseñar las preguntas/retos** para que no se puedan resolver con IA
   (decisión de Juan Carlos: depurarlas después; ligarlas a observación física del sitio).
 - [ ] **Figuras y personajes propios** (fase siguiente): marcadores diseñados por el LDCV y
@@ -71,7 +80,7 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 ```bash
 git clone <repo> && cd ldcv-busqueda-tesoro-ar
 npm install
-npm test                      # debe dar 27/27
+npm test                      # debe dar 31/31
 npm run dev                   # abrir la URL de red en el celular (https)
 # opcional, para la prueba automática de RA (requiere Chrome y ffmpeg):
 npm run marcadores:compilar && npm run e2e

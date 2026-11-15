@@ -56,6 +56,15 @@
  * @property {(contenedor: HTMLElement, ctx: ContextoMinijuego) => void} montarMinijuego
  *   Construye la UI del minijuego dentro de `contenedor` y arranca la lógica.
  *
+ * @property {'pared'|'mesa'} [orientacion]
+ *   OPCIONAL (predeterminado 'pared'). Cómo estará colocado el marcador impreso. Diseñe
+ *   siempre el objeto "Z arriba" con la base en z=0; la escena lo endereza según el caso.
+ *
+ * @property {(objeto: import('three').Object3D, ctx: { THREE: typeof import('three') }) => (number|void)} [alTocar]
+ *   OPCIONAL. Se llama cuando el jugador toca el objeto 3D en RA. Úsese para una reacción
+ *   (animación, sonido). Si devuelve un número, son los ms a esperar antes de abrir el reto.
+ *   Si no se define, el objeto hace un rebote genérico.
+ *
  * @property {() => void} desmontar
  *   Limpia todo lo creado por montarMinijuego y crearObjeto.
  *

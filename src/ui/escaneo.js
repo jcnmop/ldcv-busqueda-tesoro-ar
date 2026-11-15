@@ -39,6 +39,7 @@ export function pantallaEscaneo(raiz, ctx) {
   let cancelado = false;
   let temporizadorAyuda = null;
   let temporizadorLimite = null;
+  let tocado = false;
 
   const limpiar = () => {
     cancelado = true;
@@ -80,14 +81,30 @@ export function pantallaEscaneo(raiz, ctx) {
       escena = await crearEscena(arContainer, {
         marcadorSrc: `${import.meta.env.BASE_URL}marcadores/${est.marcadorId}.mind`,
         objeto,
+        orientacion: est.orientacion ?? 'pared',
         onEncontrado() {
-          msg.textContent = '¡Marcador encontrado! Toque "Jugar" cuando estén listos.';
-          btnJugar.hidden = false;
+          if (tocado) return;
+          msg.innerHTML = '<strong>¡Lo encontraron!</strong> Toquen el objeto para empezar el reto.';
+          btnJugar.hidden = false; // alternativa accesible al toque
+          navigator.vibrate?.(30);
         },
         onPerdido() { /* el botón sigue disponible: ya probaron que están ahí */ },
       });
-      // Rotación suave si el objeto lo pide (userData.girar = rad/s)
-      escena.enCadaCuadro((dt) => { if (objeto.userData?.girar) objeto.rotation.z += objeto.userData.girar * dt; });
+      // Tocar el objeto 3D: reacción de la estación (o rebote genérico) y luego el reto
+      escena.alTocar(async () => {
+        if (tocado) return;
+        tocado = true;
+        navigator.vibrate?.([20, 40, 20]);
+        msg.innerHTML = '<strong>¡Bien!</strong> Preparando el reto…';
+        const { rebote } = await import('../ar/modelos.js');
+        let espera = 900;
+        try {
+          const r = est.alTocar ? est.alTocar(objeto, { THREE }) : null;
+          if (typeof r === 'number') espera = r; // la estación puede pedir más tiempo para su animación
+          else if (!est.alTocar) rebote(objeto);
+        } catch (e) { console.warn('alTocar:', e); }
+        setTimeout(() => { if (!cancelado) iniciarMinijuego(); }, espera);
+      });
       if (cancelado) return;
       await escena.iniciar();
       // Mover el overlay por encima del canvas que MindAR acaba de insertar
@@ -99,7 +116,12 @@ export function pantallaEscaneo(raiz, ctx) {
     }
   })();
 
-  btnJugar.addEventListener('click', () => {
+  btnJugar.addEventListener('click', () => { tocado = true; iniciarMinijuego(); });
+
+  let minijuegoIniciado = false;
+  function iniciarMinijuego() {
+    if (minijuegoIniciado) return;
+    minijuegoIniciado = true;
     btnJugar.hidden = true;
     escena?.detener(); // apagar cámara: ahorra batería durante el minijuego
     escena = null;
@@ -160,7 +182,7 @@ export function pantallaEscaneo(raiz, ctx) {
       console.error(err);
       finalizar({ completado: false, aciertos: 0, intentos: 0, detalle: { motivo: 'error', error: String(err) } });
     }
-  });
+  }
 
   return limpiar;
 }

@@ -58,3 +58,21 @@ le ganaba al atributo `hidden` y un panel invisible bloqueaba todos los toques.
 ## 2026-11-14 · Contrato de estación como módulo con interfaz fija
 **Motivo:** permite que cualquier persona (o modelo de IA) agregue minijuegos copiando
 `_plantilla/` sin tocar el núcleo. Validado por `validarEstacion()` en tests y al cargar.
+
+## 2026-11-15 · Orientación "pared" por defecto
+**Motivo:** en la prueba real los marcadores se usan verticales (paredes, columnas,
+monitor). Los objetos se diseñan "Z arriba" y la escena los endereza sobre el borde
+inferior del póster. Una estación puede pedir `orientacion: 'mesa'` si su marcador va acostado.
+
+## 2026-11-15 · Toque tolerante sobre el objeto 3D
+**Motivo:** objetos delgados (vigas, cables) son difíciles de acertar con el dedo. Si el
+raycast no golpea, cuenta un toque dentro del rectángulo en pantalla del objeto (+10 %).
+El panel inferior de la RA deja pasar los toques (pointer-events) salvo en sus botones.
+
+## 2026-11-15 · Puente coleccionable por posición en la ruta
+**Motivo:** cualquier ruta construye el puente en orden lógico (pilas → tablero → arco →
+péndolas). Pieza ganada solo si el reto se completa; si no, queda un hueco visible.
+
+## 2026-11-15 · Robot de prueba CC0 (three.js RobotExpressive)
+**Motivo:** validar animaciones y toque sin esperar modelos propios. Licencia CC0 1.0.
+Se reemplazará por personajes/mascota del LDCV hechos en Blender.

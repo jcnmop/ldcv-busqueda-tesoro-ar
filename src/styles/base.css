@@ -22,6 +22,8 @@ html, body {
 }
 
 #app {
+  max-width: 520px;   /* diseño de celular; en computadora queda centrado */
+  margin: 0 auto;
   min-height: 100dvh;
   padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
   display: flex;
@@ -106,6 +108,8 @@ input, select {
 .minijuego {
   position: fixed;
   inset: 0;
+  max-width: 520px;
+  margin: 0 auto;
   z-index: 20;
   background: var(--azul);
   padding: 24px 20px;
@@ -114,3 +118,9 @@ input, select {
   flex-direction: column;
   gap: 16px;
 }
+
+.overlay-ar { max-width: 520px; margin: 0 auto; }
+#puente canvas { display: block; width: 100%; border-radius: 10px; }
+/* El panel inferior de la RA no debe bloquear toques al objeto 3D: solo sus botones los reciben */
+.overlay-ar { pointer-events: none; }
+.overlay-ar button { pointer-events: auto; }
