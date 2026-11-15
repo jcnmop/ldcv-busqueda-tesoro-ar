@@ -47,7 +47,8 @@ src/
     _plantilla/            Copiar para crear una estación nueva
     viga-equilibrio/       Estación real (index.js = DOM/3D, logica.js = pura y probada)
     secuencia-constructiva/
-    clash-bim/
+    agua-barrio/           Ambiental: casas ocultas, consumo, tanque
+    presa-hidrostatica/    Hidráulica: empuje hidrostático
     ojo-ingeniero/         Magnitudes reales a configurar por el organizador
   ui/                      Pantallas: registro, pista, escaneo (RA + minijuego), resultado, final
   styles/base.css

@@ -140,3 +140,11 @@ compartan respuestas: los retos son aleatorios por equipo salvo Ojo de Ingeniero
 ## 2026-11-15 · Cronómetro visible
 Tiempo anunciado en la pista y al encontrar el marcador; durante el reto, mm:ss grande con
 barra; rojo y vibración en los últimos 20 s.
+
+## 2026-11-15 · Detective de clashes reemplazado por "Agua para el barrio"
+**Decisión de Juan Carlos:** el clash no convencía. Nueva estación ambiental/sanitaria:
+contar casas (algunas ocultas detrás de una bodega → hay que girar el modelo), consumo
+= casas × 4 × dotación / 1000 (m³/día), y decidir si el tanque alcanza. El reto se genera
+junto con el objeto 3D (`retoActual`) para que el barrio y las preguntas coincidan.
+El código del clash queda en el historial de git (commit 6c6fdc6) por si se retoma.
+Nuevo campo opcional del contrato: `alturaBase` (altura del objeto sobre el póster).

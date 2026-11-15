@@ -247,27 +247,16 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
       await page.click(`#lista li[data-i="${pos}"]`);
     }
     await page.click('#verificar');
-  } else if (id === 'clash-bim') {
-    // FASE 1: detectar todos los conflictos leyendo cotas (tope > fondo de viga − 5 cm)
-    const vigaTxt = await page.$$eval('#corte text', (ts) => ts.map((t) => t.textContent).find((t) => t.startsWith('VIGA')));
-    const vigaZMin = +vigaTxt.match(/VIGA\s*([\d.]+)/)[1];
-    const elementos = await page.$$eval('#corte g[data-id]', (gs) => gs.map((g) => ({ id: g.dataset.id, zMax: +g.dataset.zmax })));
-    const enConflicto = elementos.filter((e) => e.zMax > vigaZMin - 0.05 + 1e-6);
-    ok(enConflicto.length >= 1, `Clash: ${enConflicto.length} conflicto(s) identificados por cotas`);
-    for (const e of enConflicto) await page.click(`#corte g[data-id="${e.id}"] rect:nth-of-type(2)`);
-    await page.screenshot({ path: resolve(tmp, 'clash-fase1.png') });
-    await page.click('#accion');
-    ok((await page.textContent('#feedback')).includes(`${enConflicto.length}/${enConflicto.length}`), 'Clash: detección perfecta reconocida');
-    // FASE 2: reubicar cada conflicto en el límite de la holgura
-    const limite = (vigaZMin - 0.05).toFixed(2);
-    const deslizadores = await page.$$eval('[data-mover]', (xs) => xs.map((x) => x.dataset.mover));
-    ok(deslizadores.length === enConflicto.length, 'Clash: un control de reubicación por conflicto');
-    for (const d of deslizadores) {
-      await page.evaluate(([idm, v]) => { const el = document.querySelector(`[data-mover="${idm}"]`); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, [d, limite]);
-    }
-    await page.screenshot({ path: resolve(tmp, 'clash-fase2.png') });
-    await page.click('#accion');
-    ok((await page.textContent('#feedback')).includes('resuelta'), 'Clash: reubicación válida (holgura y cielo raso)');
+  } else if (id === 'agua-barrio') {
+    // El barrio y el reto se generan juntos; la prueba lee el reto expuesto para diagnóstico
+    const reto = await page.evaluate(() => globalThis.__retoAgua);
+    ok(reto && reto.ocultas >= 2, `Agua: ${reto.casas} casas (${reto.ocultas} ocultas), dotación ${reto.dotacion} L, tanque ${reto.tanque} m³`);
+    await page.fill('#casas', String(reto.casas));
+    await page.dispatchEvent('#casas', 'input');
+    await page.click('#opciones [data-op="correcta"]');
+    await page.click(`#decision [data-alcanza="${reto.alcanza ? 'si' : 'no'}"]`);
+    await page.screenshot({ path: resolve(tmp, 'agua-reto.png'), fullPage: true });
+    await page.click('#verificar');
   } else if (id === 'presa-hidrostatica') {
     const texto = await page.textContent('#minijuego');
     const h = +texto.match(/h = (\d+) m de agua/)[1];

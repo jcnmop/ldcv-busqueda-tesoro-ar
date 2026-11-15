@@ -25,7 +25,7 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 - [x] **Bloque 2 — Núcleo del juego**: estado con persistencia, backend local/Supabase,
   sincronizador con reintentos, router, pantallas completas, tablero en vivo.
 - [x] **Bloque 3 — Estaciones reales y RA**: `ar/escena.js`, `ar/modelos.js`,
-  estaciones `viga-equilibrio`, `secuencia-constructiva`, `clash-bim` y `ojo-ingeniero`
+  estaciones `viga-equilibrio`, `secuencia-constructiva`, `agua-barrio` (antes clash-bim), `ojo-ingeniero` y `presa-hidrostatica`
   (las tres primeras con lógica pura probada),
   generación e impresión de marcadores, compilación automática de `.mind`, prueba e2e.
 - [x] Herramientas: `npm run rutas`, `npm run qr`, flujo de GitHub Pages.
@@ -76,8 +76,9 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 - [x] Flechas de carga de la viga corregidas.
 
 ## Pendiente (en orden sugerido)
-- [ ] **Reemplazar Detective de clashes** (a Juan Carlos no le convence): elegir entre las
-      3 propuestas del chat (cercha tensión/compresión en RA, nivelación topográfica, planificación de escaneo láser).
+- [x] Detective de clashes reemplazado por **Agua para el barrio** (ambiental).
+- [ ] Estaciones candidatas conversadas (sin implementar): cercha tensión/compresión, nivelación
+      topográfica, planificación de escaneo láser, aforo vehicular, granulometría.
 - [ ] Ajustar la `pista` de la presa al punto real (Laboratorio de Hidráulica) e imprimir su póster.
 - [ ] Avatar propio de Juan Carlos: .glb con animaciones → `public/modelos/`, actualizar `AVATAR` en config.
 - [ ] Probar "Ver en mi espacio" en iPhone (Quick Look) y Android (WebXR) reales.

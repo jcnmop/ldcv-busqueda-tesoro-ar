@@ -69,57 +69,10 @@ test('secuencia: puntaje completo vs parcial', () => {
 });
 
 // ---- clash-bim y ojo-ingeniero ----
-import clash from '../src/stations/clash-bim/index.js';
 import ojo from '../src/stations/ojo-ingeniero/index.js';
-import * as clashLogica from '../src/stations/clash-bim/logica.js';
 
-test('clash-bim y ojo-ingeniero cumplen el contrato', () => {
-  assert.deepEqual(validarEstacion(clash), []);
+test('ojo-ingeniero cumple el contrato', () => {
   assert.deepEqual(validarEstacion(ojo), []);
-});
-
-test('clash: 1 a 3 conflictos, siempre resolubles, y los que cumplen están sobre el cielo raso', () => {
-  const r = rngFijo(3);
-  for (let i = 0; i < 300; i++) {
-    const reto = clashLogica.generarReto(r);
-    const ids = clashLogica.conflictos(reto);
-    assert.ok(ids.length >= 1 && ids.length <= 3, `conflictos: ${ids.length}`);
-    assert.ok(ids.some((id) => clashLogica.clasificar(reto.elementos.find((e) => e.id === id), reto.viga) === 'duro'));
-    for (const e of reto.elementos) {
-      if (!ids.includes(e.id)) assert.ok(e.zMin >= reto.cieloRaso - 1e-9, 'elemento OK bajo el cielo raso');
-      // Siempre existe una posición válida: tope en el límite de holgura y fondo sobre el cielo raso
-      assert.ok(reto.viga.zMin - reto.holgura - e.alto >= reto.cieloRaso - 1e-9, `${e.nombre} no cabe`);
-    }
-  }
-});
-
-test('clash: clasificar duro / blando / ok', () => {
-  const viga = { zMin: 3.0, zMax: 3.5 };
-  assert.equal(clashLogica.clasificar({ zMax: 3.05 }, viga), 'duro');
-  assert.equal(clashLogica.clasificar({ zMax: 2.98 }, viga), 'blando');
-  assert.equal(clashLogica.clasificar({ zMax: 2.95 }, viga), 'ok');
-});
-
-test('clash: evaluar detección y resolución', () => {
-  const reto = clashLogica.generarReto(rngFijo(21));
-  const ids = clashLogica.conflictos(reto);
-  const otro = reto.elementos.find((e) => !ids.includes(e.id));
-  const det = clashLogica.evaluarDeteccion(reto, [...ids.slice(1), otro.id]);
-  assert.equal(det.omitidos, 1); assert.equal(det.falsos, 1);
-  assert.equal(clashLogica.evaluarDeteccion(reto, ids).perfecto, true);
-  const limite = Math.round((reto.viga.zMin - reto.holgura) * 100) / 100;
-  const bien = Object.fromEntries(ids.map((id) => [id, limite]));
-  assert.equal(clashLogica.evaluarResolucion(reto, bien).resueltos, ids.length);
-  const muyAbajo = Object.fromEntries(ids.map((id) => [id, reto.cieloRaso]));
-  assert.equal(clashLogica.evaluarResolucion(reto, muyAbajo).resueltos, 0);
-});
-
-test('clash: puntaje combina detección y resolución', () => {
-  const r = (a, f, t, res) => ({ detalle: { deteccion: { aciertos: a, falsos: f, total: t }, resolucion: { resueltos: res, total: t } } });
-  assert.equal(clash.calcularPuntaje(r(2, 0, 2, 2), 0), 100);
-  assert.equal(clash.calcularPuntaje(r(1, 0, 2, 2), 0), 75);
-  assert.equal(clash.calcularPuntaje(r(2, 2, 2, 0), 0), 0);
-  assert.equal(clash.calcularPuntaje({ detalle: null }, 0), 0);
 });
 
 test('ojo: puntaje por error porcentual', () => {
@@ -139,16 +92,12 @@ test('cada estación real explica su solución a partir del detalle', () => {
   const s = secuencia.explicarSolucion({ titulo: sRet.titulo, correcto: sRet.correcto, propuesta: sRet.desordenados });
   assert.equal(s.length, sRet.correcto.length + 1);
 
-  const c = clash.explicarSolucion({ vigaZMin: 3.0, vigaZMax: 3.5, cieloRaso: 2.5, holgura: 0.05,
-    conflictos: [{ nombre: 'Ducto de aire', alto: 0.4, zMaxOriginal: 3.1, tipo: 'duro', zMaxFinal: 2.95, resuelto: true }],
-    deteccion: { aciertos: 1, falsos: 0, omitidos: 0, total: 1 }, resolucion: { resueltos: 1, total: 1 } });
-  assert.ok(c.some((l) => l.includes('Ducto de aire') && l.includes('duro')));
 
   const o = ojo.explicarSolucion({ que: 'la altura', real: 14.2, unidad: 'm', estimado: 12, errorPct: 15.5 });
   assert.ok(o.some((l) => l.includes('14.2')));
 
   // Sin detalle no revienta
-  for (const e of [viga, secuencia, clash, ojo]) assert.deepEqual(e.explicarSolucion(undefined), []);
+  for (const e of [viga, secuencia, ojo]) assert.deepEqual(e.explicarSolucion(undefined), []);
 });
 
 test('validarEstacion revisa los campos opcionales', () => {
@@ -199,4 +148,44 @@ test('presa: puntaje y explicación', () => {
   assert.ok(ex.some((l) => l.includes('60 × 6 ÷ 2 = 180')));
   assert.ok(ex.some((l) => l.includes('h/3')));
   assert.deepEqual(presa.explicarSolucion(undefined), []);
+});
+
+// ---- Agua para el barrio ----
+import agua from '../src/stations/agua-barrio/index.js';
+import * as aguaLogica from '../src/stations/agua-barrio/logica.js';
+
+test('agua: cumple el contrato', () => {
+  assert.deepEqual(validarEstacion(agua), []);
+});
+
+test('agua: consumo = casas × 4 × dotación / 1000', () => {
+  assert.equal(aguaLogica.consumoM3(12, 200), 9.6);
+  assert.equal(aguaLogica.consumoM3(11, 150), 6.6);
+});
+
+test('agua: retos coherentes (opciones distintas, decisión del tanque correcta)', () => {
+  const r = rngFijo(17);
+  let si = 0;
+  for (let i = 0; i < 300; i++) {
+    const reto = aguaLogica.generarReto(r);
+    assert.equal(reto.casas, reto.visibles + reto.ocultas);
+    assert.ok(reto.ocultas >= 2, 'siempre hay casas ocultas que obligan a girar');
+    assert.equal(new Set(reto.opciones.map((o) => o.valor)).size, 4);
+    assert.equal(reto.alcanza, reto.tanque >= reto.consumo);
+    if (reto.alcanza) si++;
+  }
+  assert.ok(si > 60 && si < 240, `balance sí/no razonable (${si}/300)`);
+});
+
+test('agua: evaluar, puntaje y explicación', () => {
+  const reto = aguaLogica.generarReto(rngFijo(4));
+  const bien = aguaLogica.evaluar(reto, { casas: reto.casas, opcionId: 'correcta', alcanza: reto.alcanza });
+  assert.equal(bien.correcto, true);
+  const malConteo = aguaLogica.evaluar(reto, { casas: reto.visibles, opcionId: 'correcta', alcanza: reto.alcanza });
+  assert.equal(malConteo.conteoOk, false);
+  assert.equal(agua.calcularPuntaje({ completado: true, intentos: 1 }, 0), 100);
+  assert.equal(agua.calcularPuntaje({ completado: false, aciertos: 2, intentos: 2 }, 0), 50);
+  const ex = agua.explicarSolucion({ ...reto, respuestaCasas: reto.casas, conteoOk: true, consumoOk: true, decisionOk: true });
+  assert.ok(ex.length === 4 && ex[1].includes('Población'));
+  assert.deepEqual(agua.explicarSolucion(undefined), []);
 });

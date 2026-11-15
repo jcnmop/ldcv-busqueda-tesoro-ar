@@ -9,14 +9,14 @@
 import { validarEstacion } from './contrato.js';
 import vigaEquilibrio from './viga-equilibrio/index.js';
 import secuenciaConstructiva from './secuencia-constructiva/index.js';
-import clashBim from './clash-bim/index.js';
+import aguaBarrio from './agua-barrio/index.js';
 import ojoIngeniero from './ojo-ingeniero/index.js';
 import presaHidrostatica from './presa-hidrostatica/index.js';
 
 const ESTACIONES = [
   vigaEquilibrio,
   secuenciaConstructiva,
-  clashBim,
+  aguaBarrio,
   ojoIngeniero,
   presaHidrostatica,
 ];

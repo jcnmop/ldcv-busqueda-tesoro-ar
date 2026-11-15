@@ -92,6 +92,7 @@ export function pantallaEscaneo(raiz, ctx) {
         marcadorSrc: `${import.meta.env.BASE_URL}marcadores/${est.marcadorId}.mind`,
         objeto: conjunto,
         orientacion: est.orientacion ?? 'pared',
+        ...(est.alturaBase != null ? { alturaBase: est.alturaBase } : {}),
         onEncontrado() {
           if (tocado) return;
           msg.innerHTML = '<strong>¡Lo encontraron!</strong> Elijan Girar o Mover y usen un dedo; con dos, acerquen. '

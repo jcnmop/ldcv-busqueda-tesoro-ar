@@ -70,6 +70,10 @@
  *   de texto con la respuesta correcta y lo que hizo el equipo. Se muestra según
  *   MOSTRAR_RESPUESTAS (src/config.js). Guardar en `detalle` todo lo necesario para explicar.
  *
+ * @property {number} [alturaBase]
+ *   OPCIONAL (predeterminado −0.38). Altura de la base del objeto sobre el póster, en unidades
+ *   de marcador (0 = centro, −0.5 = borde inferior). Subirla si el objeto queda tapado por los botones.
+ *
  * @property {string} [referencia]
  *   OPCIONAL. Concepto, curso o flujo del LDCV que respalda el reto. Se muestra con la respuesta.
  *
@@ -108,6 +112,7 @@ export function validarEstacion(e) {
   opc('alTocar', 'function');
   opc('explicarSolucion', 'function');
   opc('referencia', 'string');
+  opc('alturaBase', 'number');
   if (e?.orientacion !== undefined && !['pared', 'mesa'].includes(e.orientacion)) errores.push('"orientacion" debe ser "pared" o "mesa"');
 
   if (typeof e?.id === 'string' && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(e.id)) {
