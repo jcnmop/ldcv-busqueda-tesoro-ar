@@ -12,6 +12,9 @@ y la pista de la siguiente estación.
 - Decisiones técnicas: [`docs/DECISIONES.md`](docs/DECISIONES.md)
 - Crear una estación: [`src/stations/contrato.js`](src/stations/contrato.js) y copiar `src/stations/_plantilla/`
 
+**Windows, sin terminal:** doble clic en `INICIAR.bat` (requiere Node.js LTS; el script
+explica cómo instalarlo si falta). Abre la app en `localhost:5173/?demo`.
+
 ```
 npm install
 npm run dev     # abrir la URL de red desde el celular (HTTPS)
