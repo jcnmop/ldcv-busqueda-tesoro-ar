@@ -189,3 +189,44 @@ test('agua: evaluar, puntaje y explicación', () => {
   assert.ok(ex.length === 4 && ex[1].includes('Población'));
   assert.deepEqual(agua.explicarSolucion(undefined), []);
 });
+
+// ---- Cubicación de concreto ----
+import concreto from '../src/stations/concreto/index.js';
+import * as concLogica from '../src/stations/concreto/logica.js';
+
+test('concreto: cumple el contrato', () => {
+  assert.deepEqual(validarEstacion(concreto), []);
+});
+
+test('concreto: volúmenes y viajes', () => {
+  const v = concLogica.volumenes({ largo: 8, ancho: 5, espesor: 0.15, lado: 0.3, altura: 3 });
+  assert.equal(v.losa, 6);
+  assert.equal(v.columnas, 1.08);
+  assert.equal(v.total, 7.08);
+  assert.equal(concLogica.viajes(7.08), 2);   // 7.08 / 6 → 2 (hacia arriba)
+  assert.equal(concLogica.viajes(6), 1);      // exacto: no sobra un viaje
+});
+
+test('concreto: retos con 4 opciones distintas', () => {
+  const r = rngFijo(8);
+  for (let i = 0; i < 300; i++) {
+    const reto = concLogica.generarReto(r);
+    assert.equal(new Set(reto.opciones.map((o) => o.valor)).size, 4, JSON.stringify(reto.opciones));
+    assert.equal(reto.viajes, Math.ceil(reto.total / 6 - 1e-9));
+  }
+});
+
+test('concreto: la cinta ajusta a la esquina más cercana', () => {
+  assert.deepEqual(concLogica.esquinaMasCercana({ x: 0.3, y: -0.1, z: 0.01 }, 1, 2, 0.5), { x: 1, y: -2, z: 0.5 });
+});
+
+test('concreto: evaluar, puntaje y explicación', () => {
+  const reto = concLogica.generarReto(rngFijo(2));
+  assert.equal(concLogica.evaluar(reto, { opcionId: 'correcta', viajes: reto.viajes }).correcto, true);
+  assert.equal(concLogica.evaluar(reto, { opcionId: 'solo-losa', viajes: reto.viajes }).volumenOk, false);
+  assert.equal(concreto.calcularPuntaje({ completado: true, intentos: 1 }, 0), 100);
+  assert.equal(concreto.calcularPuntaje({ completado: false, aciertos: 1, intentos: 2 }, 0), 40);
+  const ex = concreto.explicarSolucion({ ...reto, mediciones: [8, 5], respuestaViajes: reto.viajes, volumenOk: true, viajesOk: true });
+  assert.ok(ex.some((l) => l.includes('hacia arriba')));
+  assert.deepEqual(concreto.explicarSolucion(undefined), []);
+});

@@ -75,6 +75,10 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 - [x] "Así se resuelve" + referencia tras cada reto (config 'siempre').
 - [x] Flechas de carga de la viga corregidas.
 
+## Estación 6 (2026-11-15) — hecho
+- [x] `concreto`: cubicación con cinta métrica virtual en RA. Ahora son 6 estaciones (6 piezas del puente).
+- [x] 45 pruebas unitarias; e2e mide con la cinta y resuelve las 6 estaciones.
+
 ## Pendiente (en orden sugerido)
 - [x] Detective de clashes reemplazado por **Agua para el barrio** (ambiental).
 - [ ] Estaciones candidatas conversadas (sin implementar): cercha tensión/compresión, nivelación
@@ -120,7 +124,7 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 ```bash
 git clone <repo> && cd ldcv-busqueda-tesoro-ar
 npm install
-npm test                      # debe dar 40/40
+npm test                      # debe dar 45/45
 npm run dev                   # abrir la URL de red en el celular (https)
 # opcional, para la prueba automática de RA (requiere Chrome y ffmpeg):
 npm run marcadores:compilar && npm run e2e

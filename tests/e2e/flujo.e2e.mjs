@@ -182,7 +182,8 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
   ok(await page.$eval('#minijuego', (el) => el.hidden), `${est.nombre}: tocar el objeto solo reacciona (no abre el reto)`);
 
   // 2a) GIRAR (modo por defecto): arrastrar horizontal gira, vertical inclina
-  ok(await page.evaluate(() => globalThis.__escenaRA.modo()) === 'girar', `${est.nombre}: modo inicial = Girar`);
+  const modoIni = await page.evaluate(() => (globalThis.__escenaRA ? globalThis.__escenaRA.modo() : 'SIN ESCENA') + ' · minijuego oculto=' + document.querySelector('#minijuego').hidden + ' · msg=' + document.querySelector('#ar-msg')?.textContent.slice(0, 60));
+  ok(modoIni.startsWith('girar'), `${est.nombre}: modo inicial = Girar (${modoIni})`);
   const rot0 = await page.evaluate(() => globalThis.__escenaRA.manipulador.rotation.toArray());
   await page.mouse.move(160, 280); await page.mouse.down();
   await page.mouse.move(240, 320, { steps: 6 }); await page.mouse.up();
@@ -204,14 +205,49 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
   await page.waitForTimeout(300);
   await page.screenshot({ path: resolve(tmp, `ar-${id}-movido.png`) });
   // Doble toque en zona vacía (arriba del póster) para centrar
-  await page.mouse.dblclick(195, 120);
+  await page.mouse.dblclick(12, 40); // esquina vacía: lejos del objeto y de la pieza dorada
   await page.waitForTimeout(200);
   const pos2 = await page.evaluate(() => globalThis.__escenaRA.manipulador.position.length());
   ok(pos2 < 1e-6, `${est.nombre}: doble toque vuelve a centrar`);
   await page.click('.controles-ra [data-modo="girar"]');
 
+  // 2c) CONCRETO: medir el largo de la losa con la cinta (dos esquinas del borde frontal superior)
+  if (id === 'concreto') {
+    console.log('  antes de medir:', await page.evaluate(() => (globalThis.__escenaRA ? 'escena viva' : 'escena cerrada') + ' · último toque: ' + globalThis.__ultimoToque + '/' + globalThis.__ramaToque));
+    await page.click('.controles-ra [data-accion="centrar"]'); // vuelve a la inclinación inicial
+    await page.evaluate(() => { globalThis.__concreto.objeto.userData.pendiente = null; }); // el toque de prueba anterior dejó un punto marcado
+    await page.waitForTimeout(700);
+    const puntos = await page.evaluate(() => {
+      const { THREE, camera, renderer } = globalThis.__escenaRA;
+      const { losa } = globalThis.__concreto;
+      const { hx, hy, hz } = losa.userData.medidas;
+      const r = renderer.domElement.getBoundingClientRect();
+      // Puntos sobre la cara superior, cerca de las dos esquinas del borde más cercano (−y)
+      return [[-0.8 * hx, -0.8 * hy, hz], [0.8 * hx, -0.8 * hy, hz]].map(([x, y, z]) => {
+        const v = losa.localToWorld(new THREE.Vector3(x, y, z)).project(camera);
+        return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
+      });
+    });
+    await page.mouse.click(puntos[0][0], puntos[0][1]);
+    await page.waitForTimeout(500);
+    await page.mouse.click(puntos[1][0], puntos[1][1]);
+    await page.waitForTimeout(500);
+    console.log('  puntos cinta:', JSON.stringify(puntos.map((q) => q.map(Math.round))), '· msg:', (await page.textContent('#ar-msg')).slice(0, 80), '· toque:', await page.evaluate(() => globalThis.__ultimoToque + '/' + globalThis.__ramaToque));
+    const medida = await page.evaluate(() => globalThis.__ultimaMedida);
+    const largo = await page.evaluate(() => globalThis.__retoConcreto.largo);
+    ok(Math.abs(medida - largo) < 0.01, `Concreto: la cinta midió ${medida} m = largo real ${largo} m`);
+    ok((await page.textContent('#ar-msg')).includes('Medida'), 'Concreto: la medida se muestra en el panel');
+    await page.screenshot({ path: resolve(tmp, 'concreto-cinta.png') });
+  }
+
   // 3) ATRAPAR la pieza dorada: abre el reto
-  const punto = await proyectar('coleccionable');
+  // Esperar a que la pieza (que orbita) esté dentro de la pantalla y lejos del panel inferior
+  let punto;
+  for (let k = 0; k < 40; k++) {
+    punto = await proyectar('coleccionable');
+    if (punto[0] > 30 && punto[0] < 360 && punto[1] > 80 && punto[1] < 470) break;
+    await page.waitForTimeout(250);
+  }
   await page.mouse.click(punto[0], punto[1]);
   await page.waitForTimeout(500);
   await page.screenshot({ path: resolve(tmp, `atrapar-${id}.png`) });
@@ -256,6 +292,14 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
     await page.click('#opciones [data-op="correcta"]');
     await page.click(`#decision [data-alcanza="${reto.alcanza ? 'si' : 'no'}"]`);
     await page.screenshot({ path: resolve(tmp, 'agua-reto.png'), fullPage: true });
+    await page.click('#verificar');
+  } else if (id === 'concreto') {
+    const reto = await page.evaluate(() => globalThis.__retoConcreto);
+    ok(true, `Concreto: losa ${reto.largo}×${reto.ancho}×${reto.espesor}, columnas ${reto.lado}² × ${reto.altura} → ${reto.total} m³, ${reto.viajes} viaje(s)`);
+    await page.click('#opciones [data-op="correcta"]');
+    await page.fill('#viajes', String(reto.viajes));
+    await page.dispatchEvent('#viajes', 'input');
+    await page.screenshot({ path: resolve(tmp, 'concreto-reto.png'), fullPage: true });
     await page.click('#verificar');
   } else if (id === 'presa-hidrostatica') {
     const texto = await page.textContent('#minijuego');

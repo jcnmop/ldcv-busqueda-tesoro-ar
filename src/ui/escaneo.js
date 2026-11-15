@@ -93,9 +93,11 @@ export function pantallaEscaneo(raiz, ctx) {
         objeto: conjunto,
         orientacion: est.orientacion ?? 'pared',
         ...(est.alturaBase != null ? { alturaBase: est.alturaBase } : {}),
+        ...(est.inclinacionInicial != null ? { inclinacion: est.inclinacionInicial } : {}),
         onEncontrado() {
           if (tocado) return;
-          msg.innerHTML = '<strong>¡Lo encontraron!</strong> Elijan Girar o Mover y usen un dedo; con dos, acerquen. '
+          msg.innerHTML = '<strong>¡Lo encontraron!</strong> '
+            + (est.instruccionRA ? h`${est.instruccionRA} ` : 'Elijan Girar o Mover y usen un dedo; con dos, acerquen. ')
             + `<strong>Atrapen la pieza dorada</strong> para empezar el reto (tendrán ${formatearMs(est.tiempoLimiteMs)} min).`;
           btnJugar.hidden = false; // alternativa accesible
           navigator.vibrate?.(30);
@@ -116,7 +118,7 @@ export function pantallaEscaneo(raiz, ctx) {
       montarControlesRA(overlay, escena);
 
       let ultimoToque = 0;
-      escena.alTocar((tipo) => {
+      escena.alTocar((tipo, golpe) => {
         globalThis.__ultimoToque = tipo; // diagnóstico (pruebas)
         if (tocado) return;
         if (tipo === 'coleccionable') {
@@ -141,10 +143,15 @@ export function pantallaEscaneo(raiz, ctx) {
         }
         // Tocar el objeto: solo reacciona (la estación decide cómo; si no, rebota)
         const ahora = performance.now();
-        if (ahora - ultimoToque < 350) return;
+        if (ahora - ultimoToque < (est.alTocarRapido ? 120 : 350)) return;
         ultimoToque = ahora;
         navigator.vibrate?.(15);
-        try { if (est.alTocar) est.alTocar(objeto, { THREE }); else rebote(objeto); } catch (e) { console.warn('alTocar:', e); }
+        try {
+          if (est.alTocar) {
+            const texto = est.alTocar(objeto, { THREE, golpe });
+            if (typeof texto === 'string') msg.innerHTML = h`${texto}`; // la estación puede informar algo (ej. una medida)
+          } else rebote(objeto);
+        } catch (e) { console.warn('alTocar:', e); }
       });
       if (cancelado) return;
       await escena.iniciar();

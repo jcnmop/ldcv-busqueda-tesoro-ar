@@ -34,7 +34,7 @@ const PERFILES_ESTABILIDAD = {
   alta: { k: 6, zonaMuerta: 0.008, angMuerto: 0.012, gracia: 1.5 },
 };
 
-export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion = 'pared', estabilidad = 'normal', alturaBase = -0.38, onEncontrado, onPerdido }) {
+export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion = 'pared', estabilidad = 'normal', alturaBase = -0.38, inclinacion = 0, onEncontrado, onPerdido }) {
   const perfil = PERFILES_ESTABILIDAD[estabilidad] ?? PERFILES_ESTABILIDAD.normal;
   const mindar = new MindARThree({
     container: contenedor,
@@ -65,6 +65,7 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
   seguidor.visible = false;
   scene.add(seguidor);
   const manipulador = new THREE.Group();
+  manipulador.rotation.x = inclinacion; // vista inicial algo desde arriba (útil para objetos horizontales)
   if (objeto) {
     const soporte = new THREE.Group();
     if (orientacion === 'pared') {
@@ -164,6 +165,21 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
   };
   const dentro = (p, r) => r && p.x >= r.minX && p.x <= r.maxX && p.y >= r.minY && p.y <= r.maxY;
 
+  // Distancia en PÍXELES entre el toque y el centro visible de un objeto, y su radio en pantalla
+  // (a partir de su esfera envolvente). Más estable que un rectángulo cuando hay perspectiva fuerte.
+  function cercania(obj, xPx, yPx) {
+    const esfera = new THREE.Box3().setFromObject(obj).getBoundingSphere(new THREE.Sphere());
+    const r = renderer.domElement.getBoundingClientRect();
+    const aPx = (v) => { const q = v.clone().project(camera); return [r.left + (q.x + 1) / 2 * r.width, r.top + (1 - q.y) / 2 * r.height, q.z]; };
+    const [cx, cy, cz] = aPx(esfera.center);
+    if (cz > 1 || cz < -1) return { dist: Infinity, radio: 0 }; // detrás de la cámara o fuera del volumen visible
+    const v = contenedor.getBoundingClientRect();
+    const fuera = cx < v.left || cx > v.right || cy < v.top || cy > v.bottom;
+    const borde = esfera.center.clone().add(new THREE.Vector3().setFromMatrixColumn(camera.matrixWorld, 0).multiplyScalar(esfera.radius));
+    const [bx, by] = aPx(borde);
+    return { dist: Math.hypot(xPx - cx, yPx - cy), radio: Math.hypot(bx - cx, by - cy), fuera };
+  }
+
   const coleccionableDe = (o) => { while (o) { if (o.userData?.coleccionable) return o; o = o.parent; } return null; };
 
   function resolverToque(x, y) {
@@ -180,11 +196,17 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
     const coleccionables = [];
     seguidor.traverse((o) => { if (o.userData?.coleccionable && o.visible) coleccionables.push(o); });
     // (globalThis.__ramaToque: diagnóstico de qué regla decidió el toque)
-    for (const c of coleccionables) if (dentro(p, rectPantalla(c, 0.1))) { globalThis.__ramaToque = 'cerca-pieza'; return emitir('coleccionable', null, c); }
+    const cerca = (c, factor, minimo, maximo) => {
+      const k = cercania(c, x, y);
+      if (!Number.isFinite(k.dist)) return false;
+      if (k.fuera) return false; // centro de la pieza fuera de la pantalla: no se atrapa por cercanía
+      return k.dist <= Math.min(Math.max(k.radio * factor, minimo), maximo);
+    };
+    for (const c of coleccionables) if (cerca(c, 1.0, 28, 110)) { globalThis.__ramaToque = 'cerca-pieza'; return emitir('coleccionable', null, c); }
     if (golpes.length) { globalThis.__ramaToque = 'golpe-objeto'; return emitir('objeto', golpes[0], golpes[0].object); }
     const objetos = manipulador.children[0]?.children.filter((o) => !o.userData?.coleccionable) ?? [];
     for (const o of objetos) if (dentro(p, rectPantalla(o, 0.1))) { globalThis.__ramaToque = 'silueta-objeto'; return emitir('objeto', null, o); }
-    for (const c of coleccionables) if (dentro(p, rectPantalla(c, 0.4))) { globalThis.__ramaToque = 'zona-pieza'; return emitir('coleccionable', null, c); }
+    for (const c of coleccionables) if (cerca(c, 1.8, 48, 150)) { globalThis.__ramaToque = 'zona-pieza'; return emitir('coleccionable', null, c); }
     globalThis.__ramaToque = 'nada';
   }
   const emitir = (tipo, golpe, obj) => oyentesToque.forEach((fn) => fn(tipo, golpe, obj));
@@ -251,7 +273,7 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
     if (!fueToque || !visible) return;
     const ahora = performance.now();
     if (ahora - ultimoToqueMs < 320) { // doble toque: centrar
-      manipulador.position.set(0, 0, 0); manipulador.rotation.set(0, 0, 0); manipulador.scale.setScalar(1);
+      manipulador.position.set(0, 0, 0); manipulador.rotation.set(inclinacion, 0, 0); manipulador.scale.setScalar(1);
       ultimoToqueMs = 0;
       return;
     }
@@ -278,7 +300,7 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
     setModo(m) { modo = m === 'mover' ? 'mover' : 'girar'; },
     getModo: () => modo,
     /** Vuelve el objeto a su posición, giro y tamaño originales. */
-    centrar() { manipulador.position.set(0, 0, 0); manipulador.rotation.set(0, 0, 0); manipulador.scale.setScalar(1); },
+    centrar() { manipulador.position.set(0, 0, 0); manipulador.rotation.set(inclinacion, 0, 0); manipulador.scale.setScalar(1); },
     /** Registra fn(tipo, intersección|null, objeto|null); tipo = 'coleccionable' | 'objeto'. */
     alTocar(fn) { oyentesToque.push(fn); return () => { oyentesToque = oyentesToque.filter((f) => f !== fn); }; },
     async iniciar() {

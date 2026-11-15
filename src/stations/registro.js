@@ -12,6 +12,7 @@ import secuenciaConstructiva from './secuencia-constructiva/index.js';
 import aguaBarrio from './agua-barrio/index.js';
 import ojoIngeniero from './ojo-ingeniero/index.js';
 import presaHidrostatica from './presa-hidrostatica/index.js';
+import concreto from './concreto/index.js';
 
 const ESTACIONES = [
   vigaEquilibrio,
@@ -19,6 +20,7 @@ const ESTACIONES = [
   aguaBarrio,
   ojoIngeniero,
   presaHidrostatica,
+  concreto,
 ];
 
 // Validación al cargar: falla ruidosamente en desarrollo si algo no cumple el contrato.

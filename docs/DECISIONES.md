@@ -148,3 +148,16 @@ contar casas (algunas ocultas detrás de una bodega → hay que girar el modelo)
 junto con el objeto 3D (`retoActual`) para que el barrio y las preguntas coincidan.
 El código del clash queda en el historial de git (commit 6c6fdc6) por si se retoma.
 Nuevo campo opcional del contrato: `alturaBase` (altura del objeto sobre el póster).
+
+## 2026-11-15 · Estación 6: Cubicación de concreto con cinta métrica en RA
+Losa sobre 4 columnas a escala 0.06 u/m. Cinta: cada toque se ajusta a la esquina más cercana
+de la pieza tocada (medición exacta); dos toques = una medida con rótulo. Largo, ancho y altura
+se miden; espesor y sección vienen "de planos". Volumen total y viajes de mixer (6 m³, ⌈ ⌉).
+Contrato ampliado: `alTocar(objeto, {THREE, golpe})` puede devolver texto para el panel;
+`instruccionRA`, `inclinacionInicial`, `alTocarRapido` opcionales.
+
+## 2026-11-15 · Tolerancia de la pieza dorada por círculo en píxeles
+El rectángulo proyectado fallaba con perspectiva fuerte (pieza cerca de la cámara). Ahora:
+círculo alrededor del centro visible, radio acotado (110/150 px) y sin captura si el centro
+está fuera de pantalla. Las instrucciones del panel RA deben ser cortas: un texto largo
+agranda el panel y sube los botones sobre el modelo.

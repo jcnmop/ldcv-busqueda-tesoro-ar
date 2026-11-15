@@ -62,8 +62,16 @@
  *
  * @property {(objeto: import('three').Object3D, ctx: { THREE: typeof import('three') }) => (number|void)} [alTocar]
  *   OPCIONAL. Se llama cada vez que el jugador toca el objeto 3D en RA: solo una REACCIÓN
- *   (animación, sonido, cambio de color). El reto se abre al atrapar la pieza dorada del puente,
- *   que el núcleo agrega automáticamente. Si no se define, el objeto hace un rebote genérico.
+ *   (animación, sonido, cambio de color, una medición). El reto se abre al atrapar la pieza dorada
+ *   del puente, que el núcleo agrega automáticamente. Si no se define, el objeto hace un rebote.
+ *   ctx.golpe = intersección del raycast (o null si fue un toque "tolerante" cerca del objeto).
+ *   Si devuelve un texto, se muestra en el panel inferior de la RA.
+ *
+ * @property {string} [instruccionRA]
+ *   OPCIONAL. Texto propio para el panel de RA al encontrar el marcador (qué hacer con el objeto).
+ *
+ * @property {number} [inclinacionInicial]
+ *   OPCIONAL. Inclinación inicial del objeto en radianes (vista desde arriba para objetos horizontales).
  *
  * @property {(detalle: any) => string[]} [explicarSolucion]
  *   OPCIONAL. Recibe el `detalle` que la estación pasó en ctx.terminar() y devuelve líneas
@@ -113,6 +121,9 @@ export function validarEstacion(e) {
   opc('explicarSolucion', 'function');
   opc('referencia', 'string');
   opc('alturaBase', 'number');
+  opc('instruccionRA', 'string');
+  opc('inclinacionInicial', 'number');
+  opc('alTocarRapido', 'boolean');
   if (e?.orientacion !== undefined && !['pared', 'mesa'].includes(e.orientacion)) errores.push('"orientacion" debe ser "pared" o "mesa"');
 
   if (typeof e?.id === 'string' && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(e.id)) {
