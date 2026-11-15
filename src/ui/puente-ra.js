@@ -65,7 +65,7 @@ export function pantallaPuenteRA(raiz, { almacen, ir, params }) {
       const puente = new THREE.Group();
       grupo.rotation.x = Math.PI / 2;
       puente.add(grupo);
-      puente.scale.setScalar(0.2);
+      puente.scale.setScalar(0.16); // ~0.9 del ancho del póster: el temblor crece con la distancia al centro
 
       // Agua bajo el puente para dar contexto
       const agua = new THREE.Mesh(
@@ -95,16 +95,21 @@ export function pantallaPuenteRA(raiz, { almacen, ir, params }) {
         marcadorSrc: `${import.meta.env.BASE_URL}marcadores/${MARCADOR_META}.mind`,
         objeto: conjunto,
         orientacion: 'pared',
+        estabilidad: 'alta', // objeto grande respecto al póster: más suavizado
+        alturaBase: -0.15,   // centrado sobre el póster: queda lejos de los botones y tiembla menos
         onEncontrado() {
           encontrado = true;
           const n = estados.filter((e) => e.estado === 'obtenida').length;
           msg.innerHTML = completo
-            ? '<strong>¡Puente completo!</strong> Muévanlo con un dedo, giren y acerquen con dos, y toquen una pieza para ver su función.'
+            ? '<strong>¡Puente completo!</strong> Gírenlo o muévanlo con un dedo, acérquenlo con dos y toquen una pieza para ver su función.'
             : h`<strong>Su puente: ${n} de ${estados.length} piezas.</strong> Las rojas son retos no superados. Toquen una pieza para ver su función.`;
           if (completo) setTimeout(() => { confeti.visible = true; }, 2600);
           navigator.vibrate?.(30);
         },
       });
+
+      const { montarControlesRA } = await import('./controles-ra.js');
+      montarControlesRA(overlay, escena);
 
       let tConfeti = 0;
       escena.enCadaCuadro((dt) => {

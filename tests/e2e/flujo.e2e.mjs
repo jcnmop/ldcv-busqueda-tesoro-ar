@@ -169,17 +169,30 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
   // 1) Tocar el OBJETO: debe reaccionar pero NO abrir el reto.
   //    Esperar a que la pieza dorada (que orbita) no esté encima del punto a tocar.
   let pObj;
-  for (let k = 0; k < 20; k++) {
+  for (let k = 0; k < 40; k++) {
     pObj = await proyectar('objeto');
     const pc = await proyectar('coleccionable');
-    if (Math.hypot(pObj[0] - pc[0], pObj[1] - pc[1]) > 110) break;
-    await page.waitForTimeout(300);
+    if (Math.hypot(pObj[0] - pc[0], pObj[1] - pc[1]) > 170) break;
+    await page.waitForTimeout(250);
   }
   await page.mouse.click(pObj[0], pObj[1]);
   await page.waitForTimeout(900);
   ok(await page.$eval('#minijuego', (el) => el.hidden), `${est.nombre}: tocar el objeto solo reacciona (no abre el reto)`);
 
-  // 2) MOVER con un dedo: arrastrar a la derecha y arriba desplaza el objeto en el plano del póster
+  // 2a) GIRAR (modo por defecto): arrastrar horizontal gira, vertical inclina
+  ok(await page.evaluate(() => globalThis.__escenaRA.modo()) === 'girar', `${est.nombre}: modo inicial = Girar`);
+  const rot0 = await page.evaluate(() => globalThis.__escenaRA.manipulador.rotation.toArray());
+  await page.mouse.move(pObj[0], pObj[1]); await page.mouse.down();
+  await page.mouse.move(pObj[0] + 80, pObj[1] + 40, { steps: 6 }); await page.mouse.up();
+  const rot1 = await page.evaluate(() => globalThis.__escenaRA.manipulador.rotation.toArray());
+  ok(Math.abs(rot1[2] - rot0[2]) > 0.5 && Math.abs(rot1[0] - rot0[0]) > 0.1, `${est.nombre}: Girar rota (${(rot1[2] - rot0[2]).toFixed(2)} rad) e inclina (${(rot1[0] - rot0[0]).toFixed(2)} rad)`);
+  await page.waitForTimeout(300);
+  await page.screenshot({ path: resolve(tmp, `ar-${id}-girado.png`) });
+  await page.click('.controles-ra [data-accion="centrar"]');
+
+  // 2b) MOVER: tocar el botón y arrastrar desplaza el objeto en el plano del póster
+  await page.click('.controles-ra [data-modo="mover"]');
+  ok(await page.evaluate(() => globalThis.__escenaRA.modo()) === 'mover', `${est.nombre}: botón Mover activa el modo mover`);
   const pos0 = await page.evaluate(() => globalThis.__escenaRA.manipulador.position.toArray());
   await page.mouse.move(pObj[0], pObj[1]); await page.mouse.down();
   await page.mouse.move(pObj[0] + 70, pObj[1] - 50, { steps: 6 }); await page.mouse.up();
@@ -192,6 +205,7 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
   await page.waitForTimeout(200);
   const pos2 = await page.evaluate(() => globalThis.__escenaRA.manipulador.position.length());
   ok(pos2 < 1e-6, `${est.nombre}: doble toque vuelve a centrar`);
+  await page.click('.controles-ra [data-modo="girar"]');
 
   // 3) ATRAPAR la pieza dorada: abre el reto
   const punto = await proyectar('coleccionable');
@@ -241,6 +255,14 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
     await page.click(`#corte g[data-id="${malo.id}"] rect:nth-of-type(2)`);
     ok((await page.textContent('#feedback')).includes('por debajo'), 'Clash: retroalimentación del intento fallido');
     await page.click(`#corte g[data-id="${culpable.id}"] rect:nth-of-type(2)`);
+  } else if (id === 'presa-hidrostatica') {
+    const texto = await page.textContent('#minijuego');
+    const h = +texto.match(/h = ([\d.]+) m de agua/)[1];
+    await page.evaluate((v) => { const s = document.querySelector('#y'); s.value = v; s.dispatchEvent(new Event('input')); }, (h / 3).toFixed(2));
+    const correcta = (9.81 * h * h / 2).toFixed(1);
+    await page.click(`#opciones button:has-text("${correcta} kN/m")`);
+    ok(true, `Presa: h = ${h} m → F = ${correcta} kN/m a ${(h / 3).toFixed(2)} m`);
+    await page.click('#verificar');
   } else if (id === 'ojo-ingeniero') {
     await page.click('#responder');
   } else {
@@ -306,6 +328,7 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
     const r = renderer.domElement.getBoundingClientRect();
     return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
   });
+  console.log('  toque en tablero:', pPieza.map(Math.round).join(','), await page.evaluate(([x, y]) => document.elementFromPoint(x, y)?.outerHTML.slice(0, 60), pPieza));
   await page.mouse.click(pPieza[0], pPieza[1]);
   await page.waitForTimeout(300);
   ok((await page.textContent('#ar-msg')).includes('Tablero'), 'Tocar una pieza del puente en RA muestra su función');

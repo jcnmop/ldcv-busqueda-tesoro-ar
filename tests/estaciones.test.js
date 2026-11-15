@@ -128,3 +128,43 @@ test('validarEstacion revisa los campos opcionales', () => {
   assert.ok(validarEstacion({ ...base, orientacion: 'techo' }).length === 1);
   assert.ok(validarEstacion({ ...base, alTocar: 'no' }).length === 1);
 });
+
+// ---- Presa y empuje hidrostático ----
+import presa from '../src/stations/presa-hidrostatica/index.js';
+import * as presaLogica from '../src/stations/presa-hidrostatica/logica.js';
+
+test('presa: cumple el contrato', () => {
+  assert.deepEqual(validarEstacion(presa), []);
+});
+
+test('presa: física del empuje hidrostático', () => {
+  assert.ok(Math.abs(presaLogica.fuerza(10) - 490.5) < 1e-9); // 9.81·100/2
+  assert.ok(Math.abs(presaLogica.alturaResultante(9) - 3) < 1e-12);
+});
+
+test('presa: reto con 4 opciones distintas y una sola correcta', () => {
+  const r = rngFijo(11);
+  for (let i = 0; i < 100; i++) {
+    const reto = presaLogica.generarReto(r);
+    assert.ok(reto.h >= 4 && reto.h <= 12);
+    assert.equal(reto.opciones.length, 4);
+    assert.equal(new Set(reto.opciones.map((o) => o.valor.toFixed(3))).size, 4);
+    assert.equal(reto.opciones.filter((o) => o.id === reto.correcta).length, 1);
+  }
+});
+
+test('presa: evaluar altura con tolerancia y magnitud', () => {
+  const reto = { h: 9, yR: 3, correcta: 'correcta' };
+  assert.equal(presaLogica.evaluar(reto, 3.4, 'correcta').correcto, true);   // 0.4 < 0.54
+  assert.equal(presaLogica.evaluar(reto, 4.5, 'correcta').alturaOk, false);
+  assert.equal(presaLogica.evaluar(reto, 3, 'sin-mitad').fuerzaOk, false);
+});
+
+test('presa: puntaje y explicación', () => {
+  assert.equal(presa.calcularPuntaje({ completado: true, intentos: 1 }, 0), 100);
+  assert.equal(presa.calcularPuntaje({ completado: true, intentos: 2 }, 0), 80);
+  assert.equal(presa.calcularPuntaje({ completado: false, aciertos: 1, intentos: 2 }, 0), 30);
+  const ex = presa.explicarSolucion({ h: 9, F: 397.3, yR: 3, yPropuesta: 3.1, opcion: { valor: 397.3, formula: 'γ·h²/2' }, alturaOk: true, fuerzaOk: true });
+  assert.ok(ex.some((l) => l.includes('h/3')));
+  assert.deepEqual(presa.explicarSolucion(undefined), []);
+});

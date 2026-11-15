@@ -11,12 +11,14 @@ import vigaEquilibrio from './viga-equilibrio/index.js';
 import secuenciaConstructiva from './secuencia-constructiva/index.js';
 import clashBim from './clash-bim/index.js';
 import ojoIngeniero from './ojo-ingeniero/index.js';
+import presaHidrostatica from './presa-hidrostatica/index.js';
 
 const ESTACIONES = [
   vigaEquilibrio,
   secuenciaConstructiva,
   clashBim,
   ojoIngeniero,
+  presaHidrostatica,
 ];
 
 // Validación al cargar: falla ruidosamente en desarrollo si algo no cumple el contrato.

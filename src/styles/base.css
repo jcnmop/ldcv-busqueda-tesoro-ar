@@ -125,3 +125,11 @@ input, select {
 /* El panel inferior de la RA no debe bloquear toques al objeto 3D: solo sus botones los reciben */
 .overlay-ar { pointer-events: none; }
 .overlay-ar button { pointer-events: auto; }
+
+/* Barra de modos de manipulación en RA */
+.controles-ra { display: flex; gap: 8px; }
+.controles-ra button {
+  flex: 1; padding: 10px 6px; font-size: .9rem; font-weight: 600;
+  background: rgba(11, 31, 58, 0.75); color: var(--blanco); border: 2px solid var(--gris);
+}
+.controles-ra button[aria-pressed="true"] { background: var(--ambar); color: var(--azul); border-color: var(--ambar); }

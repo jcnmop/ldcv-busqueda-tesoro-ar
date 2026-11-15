@@ -58,7 +58,14 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 - [x] Bienvenida con avatar 3D animado, globo de diálogo y "Creado por Juan Carlos Navarrete".
 - [x] e2e cubre bienvenida, mover/centrar, corte del clash y puente sin póster.
 
+## Bloque 4 (2026-11-15) — hecho
+- [x] Estación `presa-hidrostatica` (lógica probada, 3D animado, marcador compilado). Ahora son 5 estaciones.
+- [x] Botones Girar / Mover / Centrar en todas las pantallas de RA; Girar también inclina.
+- [x] Estabilizador de pose (suavizado + zona muerta + gracia); perfil 'alta' para el puente en META.
+- [x] 38 pruebas unitarias; e2e recorre las 5 estaciones con todos los gestos.
+
 ## Pendiente (en orden sugerido)
+- [ ] Ajustar la `pista` de la presa al punto real (Laboratorio de Hidráulica) e imprimir su póster.
 - [ ] Avatar propio de Juan Carlos: .glb con animaciones → `public/modelos/`, actualizar `AVATAR` en config.
 - [ ] Probar "Ver en mi espacio" en iPhone (Quick Look) y Android (WebXR) reales.
 - [ ] Probar en celular real los gestos nuevos y la pieza dorada.
@@ -99,7 +106,7 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 ```bash
 git clone <repo> && cd ldcv-busqueda-tesoro-ar
 npm install
-npm test                      # debe dar 33/33
+npm test                      # debe dar 38/38
 npm run dev                   # abrir la URL de red en el celular (https)
 # opcional, para la prueba automática de RA (requiere Chrome y ffmpeg):
 npm run marcadores:compilar && npm run e2e

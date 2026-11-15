@@ -23,7 +23,19 @@ export { THREE };
  *       de frente a quien escanea.
  *   'mesa': marcador acostado en una mesa o el piso; el objeto sale perpendicular al papel.
  */
-export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion = 'pared', onEncontrado, onPerdido }) {
+/**
+ * ESTABILIDAD ('normal' | 'alta'): el objeto no cuelga directamente del ancla de MindAR sino
+ * de un "seguidor" que la persigue con suavizado exponencial y una zona muerta que ignora
+ * microvibraciones. Si el marcador se pierde un instante, el objeto se queda quieto
+ * `gracia` segundos en vez de desaparecer. 'alta' suaviza más (objetos grandes, ej. el puente).
+ */
+const PERFILES_ESTABILIDAD = {
+  normal: { k: 14, zonaMuerta: 0.004, angMuerto: 0.006, gracia: 0.8 },
+  alta: { k: 6, zonaMuerta: 0.008, angMuerto: 0.012, gracia: 1.5 },
+};
+
+export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion = 'pared', estabilidad = 'normal', alturaBase = -0.38, onEncontrado, onPerdido }) {
+  const perfil = PERFILES_ESTABILIDAD[estabilidad] ?? PERFILES_ESTABILIDAD.normal;
   const mindar = new MindARThree({
     container: contenedor,
     imageTargetSrc: marcadorSrc,
@@ -31,8 +43,10 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
     uiLoading: 'no',
     uiScanning: 'no',
     uiError: 'no',
-    filterMinCF: 0.0001, // suaviza el temblor del anclaje
+    filterMinCF: 0.0001, // suaviza el temblor del anclaje (filtro One Euro de MindAR)
     filterBeta: 0.001,
+    missTolerance: 10,   // cuadros sin ver el marcador antes de darlo por perdido (menos parpadeo)
+    warmupTolerance: 3,
   });
 
   const { renderer, scene, camera } = mindar;
@@ -45,26 +59,60 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
   scene.add(dir);
 
   const ancla = mindar.addAnchor(0);
-  // Jerarquía: ancla → soporte (orientación pared/mesa) → manipulador (gestos) → objeto
+  // Jerarquía: seguidor (persigue al ancla, suavizado) → soporte (pared/mesa) → manipulador (gestos) → objeto
+  const seguidor = new THREE.Group();
+  seguidor.matrixAutoUpdate = true;
+  seguidor.visible = false;
+  scene.add(seguidor);
   const manipulador = new THREE.Group();
   if (objeto) {
     const soporte = new THREE.Group();
     if (orientacion === 'pared') {
       soporte.rotation.x = -Math.PI / 2; // diseño Z-arriba → arriba del póster (+Y)
-      soporte.position.set(0, -0.38, 0.12); // apoyado cerca del borde inferior, un poco al frente
+      soporte.position.set(0, alturaBase, 0.12); // por defecto apoyado cerca del borde inferior, un poco al frente
     }
     manipulador.add(objeto);
     soporte.add(manipulador);
-    ancla.group.add(soporte);
+    seguidor.add(soporte);
   }
   let visible = false;
   ancla.onTargetFound = () => {
     visible = true;
     // Cualquier parte del objeto puede reaccionar a la aparición (ej: animación "Wave")
-    ancla.group.traverse((o) => o.userData?.alEncontrar?.());
+    seguidor.traverse((o) => o.userData?.alEncontrar?.());
     onEncontrado?.();
   };
-  ancla.onTargetLost = () => { visible = false; onPerdido?.(); };
+  ancla.onTargetLost = () => { visible = false; perdidoDesde = performance.now(); onPerdido?.(); };
+
+  // ---- Estabilizador: el seguidor persigue la pose del ancla ----
+  let perdidoDesde = 0;
+  let primeraPose = true;
+  const pObj = new THREE.Vector3(), qObj = new THREE.Quaternion(), eObj = new THREE.Vector3();
+  function estabilizar(dt) {
+    if (visible) {
+      ancla.group.updateMatrixWorld(true);
+      ancla.group.matrixWorld.decompose(pObj, qObj, eObj);
+      if (primeraPose) {
+        seguidor.position.copy(pObj); seguidor.quaternion.copy(qObj); seguidor.scale.copy(eObj);
+        primeraPose = false;
+      } else {
+        const escalaRef = Math.max(eObj.x, 1e-6);
+        const dist = seguidor.position.distanceTo(pObj) / escalaRef; // en unidades de marcador
+        const ang = seguidor.quaternion.angleTo(qObj);
+        // Zona muerta: si el cambio es mínimo, es ruido del seguimiento → no mover
+        if (dist > perfil.zonaMuerta || ang > perfil.angMuerto) {
+          const a = 1 - Math.exp(-perfil.k * dt);
+          seguidor.position.lerp(pObj, a);
+          seguidor.quaternion.slerp(qObj, a);
+          seguidor.scale.lerp(eObj, a);
+        }
+      }
+      seguidor.visible = true;
+    } else if (seguidor.visible && performance.now() - perdidoDesde > perfil.gracia * 1000) {
+      seguidor.visible = false;
+      primeraPose = true; // al reaparecer, saltar directo a la nueva pose
+    }
+  }
 
   let animaciones = [];
   let activo = false;
@@ -74,7 +122,7 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
   //   userData.efecto(dt)      → efectos temporales (rebote al tocar)
   //   userData.girar = rad/s   → rotación continua sobre Z
   const animarObjetos = (dt) => {
-    ancla.group.traverse((o) => {
+    seguidor.traverse((o) => {
       const u = o.userData;
       if (!u) return;
       u.actualizar?.(dt);
@@ -84,7 +132,8 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
   };
 
   // ---- Interacción: toques y gestos ----
-  //   1 dedo arrastrando      → MOVER el objeto en el plano de la pantalla (arriba/abajo/izq/der)
+  //   1 dedo, modo 'mover'    → MOVER el objeto en el plano del póster (arriba/abajo/izq/der)
+  //   1 dedo, modo 'girar'    → horizontal: girar sobre su eje vertical; vertical: inclinar (±60°)
   //   2 dedos (girar muñeca)  → GIRAR el objeto sobre su eje vertical
   //   2 dedos (pellizco)      → ESCALAR (0.5× a 2.5×)
   //   doble toque             → volver a la posición, giro y tamaño originales
@@ -120,7 +169,7 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
   function resolverToque(x, y) {
     const p = aNDC(x, y);
     raycaster.setFromCamera(p, camera);
-    const golpes = raycaster.intersectObject(ancla.group, true);
+    const golpes = raycaster.intersectObject(seguidor, true);
     for (const g of golpes) {
       const c = coleccionableDe(g.object);
       if (c) return emitir('coleccionable', g, c);
@@ -129,7 +178,7 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
     //   1. cerca de la pieza (margen chico)  2. golpe directo al objeto
     //   3. dentro de la silueta del objeto   4. cerca de la pieza (margen amplio)
     const coleccionables = [];
-    ancla.group.traverse((o) => { if (o.userData?.coleccionable && o.visible) coleccionables.push(o); });
+    seguidor.traverse((o) => { if (o.userData?.coleccionable && o.visible) coleccionables.push(o); });
     for (const c of coleccionables) if (dentro(p, rectPantalla(c, 0.25))) return emitir('coleccionable', null, c);
     if (golpes.length) return emitir('objeto', golpes[0], golpes[0].object);
     const objetos = manipulador.children[0]?.children.filter((o) => !o.userData?.coleccionable) ?? [];
@@ -164,13 +213,18 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
     return [(d * dx - b * dy) / det, (-c * dx + a * dy) / det];
   }
   const LIMITE = 1.2;
+  let modo = 'girar'; // 'girar' | 'mover' (lo cambian los botones de la pantalla)
+  const MAX_INCLINACION = Math.PI / 3;
   let ultimoToqueMs = 0;
   const alMover = (ev) => {
     const p = punteros.get(ev.pointerId);
     if (!p) return;
     const dx = ev.clientX - p.x, dy = ev.clientY - p.y;
     p.x = ev.clientX; p.y = ev.clientY;
-    if (punteros.size === 1 && !pellizcoInicial) {
+    if (punteros.size === 1 && !pellizcoInicial && modo === 'girar') {
+      manipulador.rotation.z += dx * 0.012;
+      manipulador.rotation.x = Math.max(-MAX_INCLINACION, Math.min(MAX_INCLINACION, manipulador.rotation.x + dy * 0.008));
+    } else if (punteros.size === 1 && !pellizcoInicial) {
       // Mover en el plano del póster siguiendo el dedo
       const [mx, mu] = pixelesAPlano(dx, dy);
       manipulador.position.x = Math.max(-LIMITE, Math.min(LIMITE, manipulador.position.x + mx));
@@ -208,7 +262,8 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
   contenedor.addEventListener('pointercancel', alSubir);
 
   // Gancho para pruebas automáticas y depuración (proyectar el objeto a pantalla)
-  globalThis.__escenaRA = { THREE, camera, renderer, ancla, manipulador, estaVisible: () => visible };
+  // `ancla.group` apunta al seguidor (lo que realmente se dibuja) para las pruebas
+  globalThis.__escenaRA = { THREE, camera, renderer, ancla: { group: seguidor }, manipulador, estaVisible: () => visible, modo: () => modo };
 
   return {
     scene,
@@ -217,6 +272,9 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
     /** Registra una función (dt en segundos) que corre en cada cuadro. */
     enCadaCuadro(fn) { animaciones.push(fn); return () => { animaciones = animaciones.filter((f) => f !== fn); }; },
     manipulador,
+    /** Modo del gesto de un dedo: 'girar' | 'mover'. */
+    setModo(m) { modo = m === 'mover' ? 'mover' : 'girar'; },
+    getModo: () => modo,
     /** Vuelve el objeto a su posición, giro y tamaño originales. */
     centrar() { manipulador.position.set(0, 0, 0); manipulador.rotation.set(0, 0, 0); manipulador.scale.setScalar(1); },
     /** Registra fn(tipo, intersección|null, objeto|null); tipo = 'coleccionable' | 'objeto'. */
@@ -227,6 +285,7 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
       const reloj = new THREE.Clock();
       renderer.setAnimationLoop(() => {
         const dt = Math.min(reloj.getDelta(), 0.1);
+        estabilizar(dt);
         animarObjetos(dt);
         for (const fn of animaciones) fn(dt);
         renderer.render(scene, camera);
@@ -244,7 +303,7 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
       renderer.setAnimationLoop(null);
       mindar.stop();
       // Liberar GPU: geometrías y materiales del objeto
-      ancla.group.traverse((o) => {
+      seguidor.traverse((o) => {
         o.geometry?.dispose?.();
         const mats = Array.isArray(o.material) ? o.material : [o.material];
         mats.forEach((m) => { m?.map?.dispose?.(); m?.dispose?.(); });

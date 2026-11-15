@@ -94,7 +94,7 @@ export function pantallaEscaneo(raiz, ctx) {
         orientacion: est.orientacion ?? 'pared',
         onEncontrado() {
           if (tocado) return;
-          msg.innerHTML = '<strong>¡Lo encontraron!</strong> Muévanlo con un dedo; gírenlo y acérquenlo con dos. '
+          msg.innerHTML = '<strong>¡Lo encontraron!</strong> Elijan Girar o Mover y usen un dedo; con dos, acerquen. '
             + '<strong>Atrapen la pieza dorada</strong> para empezar el reto.';
           btnJugar.hidden = false; // alternativa accesible
           navigator.vibrate?.(30);
@@ -110,6 +110,9 @@ export function pantallaEscaneo(raiz, ctx) {
         t += dt;
         coleccionable.position.set(0.42 * Math.sin(t * 0.9), -0.28 - 0.08 * Math.cos(t * 0.9), 0.62 + 0.06 * Math.sin(t * 2.3));
       });
+
+      const { montarControlesRA } = await import('./controles-ra.js');
+      montarControlesRA(overlay, escena);
 
       let ultimoToque = 0;
       escena.alTocar((tipo) => {

@@ -107,3 +107,14 @@ usa `ar-modes="webxr quick-look"`; Android sin soporte WebXR/ARCore solo ve el 3
 ## 2026-11-15 · Bienvenida con avatar configurable
 **Motivo:** presentación del evento. `src/config.js → AVATAR, CREADO_POR`. Robot CC0 como
 marcador de posición hasta tener el avatar propio de Juan Carlos (.glb desde Blender).
+
+## 2026-11-15 · Modos Girar / Mover con botones + estabilizador de pose
+**Motivo:** en la prueba real no se distinguía girar de mover y el puente final temblaba.
+Un dedo hace lo que indica el modo activo (botones en pantalla, `controles-ra.js`); dos dedos
+siempre escalan y giran. El objeto cuelga de un "seguidor" con suavizado exponencial, zona
+muerta y periodo de gracia al perder el marcador (`PERFILES_ESTABILIDAD` en escena.js);
+el puente usa el perfil 'alta' y va centrado en el póster (menos brazo de palanca).
+
+## 2026-11-15 · Estación 5: Presa y empuje hidrostático
+**Motivo:** pedido de un reto de hidráulica. F = γh²/2 por metro de ancho, aplicada a h/3
+del fondo; distractores con errores típicos (γh², γh, γh²/3). Tocar la presa cambia el nivel.
