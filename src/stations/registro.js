@@ -4,12 +4,15 @@
  * cada equipo recibe su propio orden (ver src/core/rutas.js).
  *
  * Para activar una estación nueva: importarla y agregarla al arreglo.
+ * Para desactivar una (p. ej. su marcador se dañó el día del evento): comentarla.
  */
 import { validarEstacion } from './contrato.js';
-import plantilla from './_plantilla/index.js';
+import vigaEquilibrio from './viga-equilibrio/index.js';
+import secuenciaConstructiva from './secuencia-constructiva/index.js';
 
 const ESTACIONES = [
-  plantilla, // TODO: quitar cuando existan estaciones reales
+  vigaEquilibrio,
+  secuenciaConstructiva,
 ];
 
 // Validación al cargar: falla ruidosamente en desarrollo si algo no cumple el contrato.
@@ -21,6 +24,8 @@ for (const e of ESTACIONES) {
 }
 const ids = ESTACIONES.map((e) => e.id);
 if (new Set(ids).size !== ids.length) throw new Error('Hay estaciones con id repetido');
+const marcadores = ESTACIONES.map((e) => e.marcadorId);
+if (new Set(marcadores).size !== marcadores.length) throw new Error('Hay estaciones con marcadorId repetido');
 
 export const estaciones = ESTACIONES;
 export const porId = Object.fromEntries(ESTACIONES.map((e) => [e.id, e]));

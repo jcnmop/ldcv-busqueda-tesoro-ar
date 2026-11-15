@@ -11,3 +11,6 @@ Thumbs.db
 *.rvt
 *.blend
 *.blend1
+tools/.mindar/
+tools/.vendor/
+tools/.e2e/

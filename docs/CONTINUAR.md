@@ -4,47 +4,66 @@
 > entre sesiones y entre modelos (Fable → Opus → asistentes del LDCV).
 
 ## Última actualización
-2026-11-14 · Sesión inicial con Claude Fable 5.1.
+2026-11-14 · Sesión inicial con Claude Fable 5.1. Bloques 1–3 completos; la app es
+jugable de punta a punta con dos estaciones reales.
+
+## Verificación hecha en esta sesión
+- `npm test`: 23 pruebas unitarias pasan.
+- `npm run e2e`: Chrome sin ventana con cámara falsa reconoce ambos marcadores `.mind`
+  reales en ~2,5 s, resuelve los dos minijuegos, llega a la pantalla final y el tablero
+  muestra al equipo. Capturas en `tools/.e2e/*.png` (ignoradas por git).
+- `npm run build` y build con `--base=/<repo>/` para GitHub Pages: correctos.
+- QR de inicio verificado por decodificación con OpenCV.
 
 ## Hecho
-- [x] **Bloque 1 — Estructura y arquitectura base**
-  - Proyecto Vite + JS, carpetas, `index.html`, estilos base.
-  - `src/stations/contrato.js`: contrato de estación con validador.
-  - `src/stations/_plantilla/`: estación de ejemplo mínima que cumple el contrato.
-  - `src/stations/registro.js`: registro único de estaciones con validación al cargar.
-  - `src/core/rutas.js`: rutas deterministas por equipo + validación de secuencia.
-  - `src/core/puntaje.js`: fórmulas de puntaje compartidas.
-  - `tests/core.test.js`: 10 pruebas, todas pasan.
-  - Docs: ARQUITECTURA.md, DECISIONES.md, CLAUDE.md.
+- [x] **Bloque 1 — Estructura y arquitectura base** (contrato, plantilla, rutas, puntaje, docs)
+- [x] **Bloque 2 — Núcleo del juego**: estado con persistencia, backend local/Supabase,
+  sincronizador con reintentos, router, pantallas completas, tablero en vivo.
+- [x] **Bloque 3 — Estaciones reales y RA**: `ar/escena.js`, `ar/modelos.js`,
+  estaciones `viga-equilibrio` y `secuencia-constructiva` con lógica pura probada,
+  generación e impresión de marcadores, compilación automática de `.mind`, prueba e2e.
+- [x] Herramientas: `npm run rutas`, `npm run qr`, flujo de GitHub Pages.
+- [x] Docs: MARCADORES, MODELOS, SUPABASE, PUBLICAR.
 
-## Pendiente (en orden)
-- [ ] **Bloque 2 — Núcleo del juego**
-  - `src/core/estado.js`: equipo, ruta, completadas, puntos, marcas de tiempo; persistencia en localStorage.
-  - `src/core/backend/{index,local,supabase}.js`: adaptador; `local` completo, `supabase` con la interfaz lista y TODO en las credenciales.
-  - `src/core/router.js` + `src/ui/*`: pantallas registro → pista → escaneo → resultado → final.
-  - `src/main.js`: arranque.
-  - Pruebas de `estado.js`.
-- [ ] **Bloque 3 — Estación de referencia completa**
-  - `src/ar/escena.js`: MindAR + Three.js, callback al detectar marcador, anclar `crearObjeto()`.
-  - Primera estación real (sugerida: `viga-equilibrio` o `clash-bim`) con minijuego jugable.
-  - `docs/MARCADORES.md`: cómo diseñar la imagen y compilarla a `.mind`.
-  - Marcador de prueba en `public/marcadores/`.
-- [ ] **Bloque 4 — Relevo y publicación**
-  - Verificar `npm run build`.
-  - Commit inicial y push a GitHub.
-  - Decidir hosting (GitHub Pages es suficiente; necesita HTTPS, que Pages da por defecto).
-- [ ] Después (con Opus u otro): estaciones restantes, tabla de posiciones en vivo (`/tablero`),
-  `tools/rutas.js` para imprimir rutas por equipo, `tools/qr.js`, pruebas en sitio con celulares.
+## Pendiente (en orden sugerido)
+- [ ] **Push a GitHub** (requiere que Juan Carlos cree el repo y vincule GitHub en claude.ai).
+  Luego Settings → Pages → Source: GitHub Actions. Ver docs/PUBLICAR.md.
+- [ ] **Primera prueba en celular real** (`npm run dev`, URL de red, marcador en pantalla o
+  impreso). Lo que NO se pudo validar aquí y hay que mirar en el teléfono:
+  - escala y posición de los objetos 3D sobre el marcador (ajustar tamaños en `crearObjeto`);
+  - estabilidad del anclaje con la mano temblando (`filterMinCF`/`filterBeta` en escena.js);
+  - rendimiento en gama media y consumo de batería;
+  - que el overlay (botón Jugar) quede sobre el video en iOS Safari.
+- [ ] **Más estaciones** (copiar `_plantilla/`). Ideas ya conversadas: clash en modelo BIM
+  (cargar un `.glb` del lab con `cargarGLB`), estimar altura de un edificio real del campus
+  ("Ojo de Ingeniero"), identificar el instrumento topográfico, lectura de plano.
+- [ ] Reemplazar los marcadores generados por diseños propios del LDCV si se desea
+  (ver docs/MARCADORES.md); recompilar con `npm run marcadores:compilar`.
+- [ ] Decidir y configurar **Supabase** (docs/SUPABASE.md) o quedarse en local.
+- [ ] Ajustar textos de `pista` de cada estación a los puntos reales del campus.
+- [ ] Pulido opcional: sonido al detectar marcador, vibración, pantalla de "cómo jugar",
+  modo organizador para reiniciar un equipo con código.
 
 ## Decisiones abiertas (requieren a Juan Carlos)
-- Cantidad de estaciones y ubicaciones en el campus.
-- Lista definitiva de minijuegos (ver ideas en ARQUITECTURA.md y en el chat de origen:
-  viga en equilibrio, clash en modelo BIM, estimar altura de edificio real, secuencia constructiva).
-- Crear cuenta de Supabase y pasar URL + anon key (o decidir quedarse solo en local + exportar CSV).
-- Nombre y URL del repositorio en GitHub.
+- Cantidad final de estaciones y ubicaciones.
+- Nombre y URL del repositorio (afecta el QR y `--base`).
+- Supabase sí/no.
+- Si los asistentes desarrollan estaciones: asignar una carpeta por persona bajo `src/stations/`.
 
-## Cómo probar en un celular
-1. `npm install && npm run dev`
-2. Anotar la URL de red que imprime Vite (https://192.168.x.x:5173).
-3. Abrirla en el celular en la misma Wi-Fi; aceptar el certificado local.
-4. Permitir la cámara.
+## Cómo retomar en 5 minutos
+```bash
+git clone <repo> && cd ldcv-busqueda-tesoro-ar
+npm install
+npm test                      # debe dar 23/23
+npm run dev                   # abrir la URL de red en el celular (https)
+# opcional, para la prueba automática de RA (requiere Chrome y ffmpeg):
+npm run marcadores:compilar && npm run e2e
+```
+
+## Notas para el siguiente modelo
+- Leer `CLAUDE.md` y `src/stations/contrato.js` antes de tocar estaciones.
+- La lógica de cada minijuego va en `logica.js` (pura, probada en `tests/estaciones.test.js`);
+  `index.js` solo hace DOM y Three.js. Mantener esa separación.
+- No instalar `three` ni `mind-ar` por npm (ver DECISIONES.md).
+- Si se cambia la firma del contrato, actualizar `validarEstacion`, `_plantilla`, ambas
+  estaciones y este documento.

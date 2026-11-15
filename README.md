@@ -17,3 +17,7 @@ npm install
 npm run dev     # abrir la URL de red desde el celular (HTTPS)
 npm test
 ```
+
+Más comandos: `npm run marcadores` (imágenes de marcador), `npm run marcadores:compilar`
+(.mind), `npm run e2e` (prueba completa con cámara falsa), `npm run qr -- <url>`, `npm run rutas`.
+Publicación: [`docs/PUBLICAR.md`](docs/PUBLICAR.md).

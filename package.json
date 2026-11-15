@@ -10,9 +10,14 @@
     "preview": "vite preview --host",
     "test": "node --test tests/*.test.js",
     "rutas": "node tools/rutas.js",
-    "qr": "node tools/qr.js"
+    "qr": "node tools/qr.js",
+    "marcadores": "node tools/marcadores.js",
+    "marcadores:compilar": "node tools/compilar-marcadores.mjs",
+    "e2e": "node tests/e2e/flujo.e2e.mjs"
   },
   "devDependencies": {
+    "playwright": "^1.65.1",
+    "qrcode": "^1.5.4",
     "vite": "^6.0.0",
     "vite-plugin-mkcert": "^1.17.6"
   },

@@ -23,33 +23,46 @@ se proyecta en el evento.
 ## Estructura
 
 ```
-index.html                 Única página. #app (pantallas) + #ar-container (cámara)
+index.html                 App del jugador. Import map (three, mindar) + #app + #ar-container + #minijuego
+tablero.html               Tabla de posiciones en vivo (proyectar en el evento)
 src/
-  main.js                  Arranque: lee estado, decide pantalla inicial
+  main.js                  Arranque: lee estado, decide pantalla inicial, arranca sincronizador
+  tablero.js               Lógica del tablero
   core/                    Lógica del juego. NO conoce los minijuegos.
     estado.js              Estado del equipo (id, ruta, completadas, puntos) + persistencia
     rutas.js               Permutación determinista por equipo + validación de secuencia
     puntaje.js             Fórmulas de puntaje compartidas
+    sincronizador.js       Envío al backend con reintentos; nunca bloquea el juego
+    router.js              Cambia de pantalla dentro de #app; ayudantes h`` y formatearMs
     backend/               Adaptador de datos
-      index.js             Elige local|supabase según VITE_BACKEND
-      local.js             localStorage (desarrollo y respaldo sin conexión)
-      supabase.js          Sincronización con Supabase (pendiente de credenciales)
-    router.js              Cambia de pantalla dentro de #app
+      index.js             Elige local|supabase según VITE_BACKEND (cae a local si falla)
+      local.js             localStorage (desarrollo y respaldo sin conexión) + ordenarTabla()
+      supabase.js          REST de Supabase con fetch (sin SDK); ver docs/SUPABASE.md
   ar/
-    escena.js              Inicializa MindAR + Three.js, expone onMarcadorDetectado()
+    escena.js              Envoltorio MindAR + Three.js: crearEscena(), iniciar(), detener()
+    modelos.js             cargarGLB(), etiqueta(), indicadorCarga()
   stations/
     contrato.js            EL CONTRATO. Leer antes de crear una estación.
     registro.js            Lista de estaciones activas (único lugar)
     _plantilla/            Copiar para crear una estación nueva
-    <id-estacion>/index.js Una carpeta por estación
-  ui/                      Pantallas: registro, pista, escaneo, resultado, final
+    viga-equilibrio/       Estación real 1 (index.js + logica.js pura y probada)
+    secuencia-constructiva/ Estación real 2
+  ui/                      Pantallas: registro, pista, escaneo (RA + minijuego), resultado, final
   styles/base.css
 public/
-  marcadores/<id>.mind     Marcadores compilados por MindAR
-  modelos/<id>.glb         Modelos optimizados (Blender → glTF)
-tools/                     Scripts del organizador (imprimir rutas, generar QR)
-tests/                     Pruebas del núcleo y del contrato
-docs/                      Este documento, DECISIONES.md, CONTINUAR.md, MARCADORES.md
+  marcadores/<id>.{svg,png,mind}  Imagen imprimible y marcador compilado por estación
+  modelos/<id>.glb         Modelos optimizados (Blender → glTF); ver docs/MODELOS.md
+  qr-inicio.{svg,png}      QR del cartel de inicio
+tools/
+  marcadores.js            Genera imágenes de marcador para cada estación del registro
+  compilar-marcadores.mjs  Compila PNG → .mind con Chrome sin ventana
+  rutas.js                 Distribución de rutas / rutas de ejemplo por equipo
+  qr.js                    QR de inicio
+tests/
+  *.test.js                Pruebas unitarias (npm test): núcleo, estado, contrato, lógica de estaciones
+  e2e/flujo.e2e.mjs        Punta a punta con cámara falsa (npm run e2e)
+.github/workflows/publicar.yml  Build + GitHub Pages en cada push a main
+docs/                      ARQUITECTURA, DECISIONES, CONTINUAR, MARCADORES, MODELOS, SUPABASE, PUBLICAR
 ```
 
 ## Flujo de una partida

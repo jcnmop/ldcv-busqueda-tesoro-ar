@@ -100,6 +100,9 @@ input, select {
   gap: 12px;
 }
 
+/* [hidden] debe ganar siempre a cualquier display de clase */
+[hidden] { display: none !important; }
+
 .minijuego {
   position: fixed;
   inset: 0;
