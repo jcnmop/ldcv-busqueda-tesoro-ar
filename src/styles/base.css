@@ -1,0 +1,113 @@
+/* Estilos base. Paleta institucional sobria: azul profundo + acento ámbar. */
+:root {
+  --azul: #0b1f3a;
+  --azul-claro: #1e3a5f;
+  --ambar: #f2a900;
+  --blanco: #f7f7f5;
+  --gris: #9aa5b1;
+  --ok: #2e9e5b;
+  --error: #d0453c;
+  --radio: 14px;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--azul);
+  color: var(--blanco);
+  -webkit-tap-highlight-color: transparent;
+}
+
+#app {
+  min-height: 100dvh;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+#ar-container {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  background: #000;
+}
+#ar-container[hidden] { display: none; }
+
+h1 { font-size: 1.6rem; margin: 0; line-height: 1.2; }
+h2 { font-size: 1.2rem; margin: 0; color: var(--ambar); }
+p  { margin: 0; line-height: 1.5; }
+.muted { color: var(--gris); font-size: 0.9rem; }
+
+.tarjeta {
+  background: var(--azul-claro);
+  border-radius: var(--radio);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+button, .boton {
+  appearance: none;
+  border: 0;
+  border-radius: var(--radio);
+  padding: 16px 20px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  background: var(--ambar);
+  color: var(--azul);
+  cursor: pointer;
+  width: 100%;
+}
+button.secundario { background: transparent; color: var(--blanco); border: 2px solid var(--gris); }
+button:disabled { opacity: 0.5; cursor: default; }
+
+input, select {
+  width: 100%;
+  padding: 14px;
+  border-radius: var(--radio);
+  border: 2px solid var(--gris);
+  background: var(--azul);
+  color: var(--blanco);
+  font-size: 1rem;
+}
+
+.progreso {
+  display: flex;
+  gap: 6px;
+}
+.progreso span {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--azul-claro);
+}
+.progreso span.hecha { background: var(--ok); }
+.progreso span.actual { background: var(--ambar); }
+
+.overlay-ar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 20px;
+  background: linear-gradient(transparent, rgba(0,0,0,0.75));
+  z-index: 11;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.minijuego {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: var(--azul);
+  padding: 24px 20px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
