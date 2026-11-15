@@ -108,7 +108,7 @@ export function pantallaEscaneo(raiz, ctx) {
       escena.enCadaCuadro((dt) => {
         if (atrapada) return;
         t += dt;
-        coleccionable.position.set(0.42 * Math.sin(t * 0.9), -0.28 - 0.08 * Math.cos(t * 0.9), 0.62 + 0.06 * Math.sin(t * 2.3));
+        coleccionable.position.set(0.3 * Math.sin(t * 0.9), -0.28 - 0.08 * Math.cos(t * 0.9), 0.62 + 0.06 * Math.sin(t * 2.3));
       });
 
       const { montarControlesRA } = await import('./controles-ra.js');
@@ -116,6 +116,7 @@ export function pantallaEscaneo(raiz, ctx) {
 
       let ultimoToque = 0;
       escena.alTocar((tipo) => {
+        globalThis.__ultimoToque = tipo; // diagnóstico (pruebas)
         if (tocado) return;
         if (tipo === 'coleccionable') {
           tocado = true;

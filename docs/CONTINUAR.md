@@ -64,6 +64,12 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 - [x] Estabilizador de pose (suavizado + zona muerta + gracia); perfil 'alta' para el puente en META.
 - [x] 38 pruebas unitarias; e2e recorre las 5 estaciones con todos los gestos.
 
+## Bloque 5 (2026-11-15) — hecho
+- [x] Clash en dos fases (detectar duros/blandos → resolver con holgura y cielo raso).
+- [x] Presa simplificada (γ≈10, h par, F = área del triángulo).
+- [x] Pieza dorada más pequeña/visible; tolerancias de toque ajustadas.
+- [x] 40 pruebas unitarias; e2e estable en corridas repetidas.
+
 ## Pendiente (en orden sugerido)
 - [ ] Ajustar la `pista` de la presa al punto real (Laboratorio de Hidráulica) e imprimir su póster.
 - [ ] Avatar propio de Juan Carlos: .glb con animaciones → `public/modelos/`, actualizar `AVATAR` en config.
@@ -106,7 +112,7 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 ```bash
 git clone <repo> && cd ldcv-busqueda-tesoro-ar
 npm install
-npm test                      # debe dar 38/38
+npm test                      # debe dar 40/40
 npm run dev                   # abrir la URL de red en el celular (https)
 # opcional, para la prueba automática de RA (requiere Chrome y ffmpeg):
 npm run marcadores:compilar && npm run e2e

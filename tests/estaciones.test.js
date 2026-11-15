@@ -78,21 +78,48 @@ test('clash-bim y ojo-ingeniero cumplen el contrato', () => {
   assert.deepEqual(validarEstacion(ojo), []);
 });
 
-test('clash: exactamente un elemento colisiona y es el culpable', () => {
+test('clash: 1 a 3 conflictos, siempre resolubles, y los que cumplen están sobre el cielo raso', () => {
   const r = rngFijo(3);
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 300; i++) {
     const reto = clashLogica.generarReto(r);
-    const chocan = reto.elementos.filter((e) => clashLogica.colisiona(e, reto.viga));
-    assert.equal(chocan.length, 1, JSON.stringify(reto));
-    assert.equal(chocan[0].id, reto.culpableId);
-    assert.equal(clashLogica.evaluar(reto, reto.culpableId).correcto, true);
+    const ids = clashLogica.conflictos(reto);
+    assert.ok(ids.length >= 1 && ids.length <= 3, `conflictos: ${ids.length}`);
+    assert.ok(ids.some((id) => clashLogica.clasificar(reto.elementos.find((e) => e.id === id), reto.viga) === 'duro'));
+    for (const e of reto.elementos) {
+      if (!ids.includes(e.id)) assert.ok(e.zMin >= reto.cieloRaso - 1e-9, 'elemento OK bajo el cielo raso');
+      // Siempre existe una posición válida: tope en el límite de holgura y fondo sobre el cielo raso
+      assert.ok(reto.viga.zMin - reto.holgura - e.alto >= reto.cieloRaso - 1e-9, `${e.nombre} no cabe`);
+    }
   }
 });
 
-test('clash: puntaje penaliza el segundo intento', () => {
-  assert.equal(clash.calcularPuntaje({ completado: true, intentos: 1 }, 0), 100);
-  assert.equal(clash.calcularPuntaje({ completado: true, intentos: 2 }, 0), 75);
-  assert.equal(clash.calcularPuntaje({ completado: false, intentos: 2 }, 0), 0);
+test('clash: clasificar duro / blando / ok', () => {
+  const viga = { zMin: 3.0, zMax: 3.5 };
+  assert.equal(clashLogica.clasificar({ zMax: 3.05 }, viga), 'duro');
+  assert.equal(clashLogica.clasificar({ zMax: 2.98 }, viga), 'blando');
+  assert.equal(clashLogica.clasificar({ zMax: 2.95 }, viga), 'ok');
+});
+
+test('clash: evaluar detección y resolución', () => {
+  const reto = clashLogica.generarReto(rngFijo(21));
+  const ids = clashLogica.conflictos(reto);
+  const otro = reto.elementos.find((e) => !ids.includes(e.id));
+  const det = clashLogica.evaluarDeteccion(reto, [...ids.slice(1), otro.id]);
+  assert.equal(det.omitidos, 1); assert.equal(det.falsos, 1);
+  assert.equal(clashLogica.evaluarDeteccion(reto, ids).perfecto, true);
+  const limite = Math.round((reto.viga.zMin - reto.holgura) * 100) / 100;
+  const bien = Object.fromEntries(ids.map((id) => [id, limite]));
+  assert.equal(clashLogica.evaluarResolucion(reto, bien).resueltos, ids.length);
+  const muyAbajo = Object.fromEntries(ids.map((id) => [id, reto.cieloRaso]));
+  assert.equal(clashLogica.evaluarResolucion(reto, muyAbajo).resueltos, 0);
+});
+
+test('clash: puntaje combina detección y resolución', () => {
+  const r = (a, f, t, res) => ({ detalle: { deteccion: { aciertos: a, falsos: f, total: t }, resolucion: { resueltos: res, total: t } } });
+  assert.equal(clash.calcularPuntaje(r(2, 0, 2, 2), 0), 100);
+  assert.equal(clash.calcularPuntaje(r(1, 0, 2, 2), 0), 75);
+  assert.equal(clash.calcularPuntaje(r(2, 2, 2, 0), 0), 0);
+  assert.equal(clash.calcularPuntaje({ detalle: null }, 0), 0);
 });
 
 test('ojo: puntaje por error porcentual', () => {
@@ -112,8 +139,10 @@ test('cada estación real explica su solución a partir del detalle', () => {
   const s = secuencia.explicarSolucion({ titulo: sRet.titulo, correcto: sRet.correcto, propuesta: sRet.desordenados });
   assert.equal(s.length, sRet.correcto.length + 1);
 
-  const c = clash.explicarSolucion({ culpableNombre: 'Ducto de aire', culpableZMin: 2.9, culpableZMax: 3.3, vigaZMin: 3.0, vigaZMax: 3.5 });
-  assert.ok(c.some((l) => l.includes('Ducto de aire')));
+  const c = clash.explicarSolucion({ vigaZMin: 3.0, vigaZMax: 3.5, cieloRaso: 2.5, holgura: 0.05,
+    conflictos: [{ nombre: 'Ducto de aire', alto: 0.4, zMaxOriginal: 3.1, tipo: 'duro', zMaxFinal: 2.95, resuelto: true }],
+    deteccion: { aciertos: 1, falsos: 0, omitidos: 0, total: 1 }, resolucion: { resueltos: 1, total: 1 } });
+  assert.ok(c.some((l) => l.includes('Ducto de aire') && l.includes('duro')));
 
   const o = ojo.explicarSolucion({ que: 'la altura', real: 14.2, unidad: 'm', estimado: 12, errorPct: 15.5 });
   assert.ok(o.some((l) => l.includes('14.2')));
@@ -138,7 +167,8 @@ test('presa: cumple el contrato', () => {
 });
 
 test('presa: física del empuje hidrostático', () => {
-  assert.ok(Math.abs(presaLogica.fuerza(10) - 490.5) < 1e-9); // 9.81·100/2
+  assert.equal(presaLogica.fuerza(10), 500); // γ≈10: 10·100/2
+  assert.equal(presaLogica.fuerza(6), 180);
   assert.ok(Math.abs(presaLogica.alturaResultante(9) - 3) < 1e-12);
 });
 
@@ -146,7 +176,8 @@ test('presa: reto con 4 opciones distintas y una sola correcta', () => {
   const r = rngFijo(11);
   for (let i = 0; i < 100; i++) {
     const reto = presaLogica.generarReto(r);
-    assert.ok(reto.h >= 4 && reto.h <= 12);
+    assert.ok([4, 6, 8, 10, 12].includes(reto.h));
+    assert.ok(reto.opciones.every((o) => Number.isInteger(o.valor)), 'opciones enteras para cálculo mental');
     assert.equal(reto.opciones.length, 4);
     assert.equal(new Set(reto.opciones.map((o) => o.valor.toFixed(3))).size, 4);
     assert.equal(reto.opciones.filter((o) => o.id === reto.correcta).length, 1);
@@ -164,7 +195,8 @@ test('presa: puntaje y explicación', () => {
   assert.equal(presa.calcularPuntaje({ completado: true, intentos: 1 }, 0), 100);
   assert.equal(presa.calcularPuntaje({ completado: true, intentos: 2 }, 0), 80);
   assert.equal(presa.calcularPuntaje({ completado: false, aciertos: 1, intentos: 2 }, 0), 30);
-  const ex = presa.explicarSolucion({ h: 9, F: 397.3, yR: 3, yPropuesta: 3.1, opcion: { valor: 397.3, formula: 'γ·h²/2' }, alturaOk: true, fuerzaOk: true });
+  const ex = presa.explicarSolucion({ h: 6, F: 180, yR: 2, yPropuesta: 2.1, opcion: { valor: 180, formula: 'área' }, alturaOk: true, fuerzaOk: true });
+  assert.ok(ex.some((l) => l.includes('60 × 6 ÷ 2 = 180')));
   assert.ok(ex.some((l) => l.includes('h/3')));
   assert.deepEqual(presa.explicarSolucion(undefined), []);
 });

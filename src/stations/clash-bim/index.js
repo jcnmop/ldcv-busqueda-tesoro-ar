@@ -1,25 +1,13 @@
 /**
- * ESTACIÓN: Detective de clashes
- * Objeto RA: viga con varias instalaciones cruzándola; una la atraviesa (esfera roja).
- * Minijuego: en una planta con cotas, tocar el elemento que colisiona con la viga.
- * 2 intentos. Enseña a leer cotas (zMin/zMax) en lugar de confiar solo en la planta.
+ * ESTACIÓN: Detective de clashes (coordinación BIM en dos fases)
+ * Objeto RA: viga con instalaciones cruzándola; una la atraviesa (esfera roja).
+ * Fase 1 DETECTAR: marcar todos los conflictos (choques duros y blandos por holgura).
+ * Fase 2 RESOLVER: reubicar los elementos en conflicto respetando holgura y cielo raso.
  */
 import { puntajePorTiempo } from '../../core/puntaje.js';
-import { generarReto, evaluar } from './logica.js';
+import { generarReto, conflictos, clasificar, evaluarDeteccion, evaluarResolucion } from './logica.js';
 
-const INTENTOS_MAX = 2;
-
-/** Datos para explicar la respuesta después (solo lo necesario, sin funciones). */
-function resumenClash(reto, tocadoId) {
-  const c = reto.elementos.find((e) => e.id === reto.culpableId);
-  const t = reto.elementos.find((e) => e.id === tocadoId);
-  return {
-    culpable: reto.culpableId,
-    culpableNombre: c.nombre, culpableZMin: c.zMin, culpableZMax: c.zMax,
-    vigaZMin: reto.viga.zMin, vigaZMax: reto.viga.zMax,
-    tocadoNombre: t?.nombre ?? null,
-  };
-}
+const INTENTOS_RESOLVER = 2;
 let limpiar = () => {};
 
 /** @type {import('../contrato.js').Estacion} */
@@ -28,7 +16,7 @@ const estacion = {
   nombre: 'Detective de clashes',
   marcadorId: 'clash-bim',
   pista: 'El marcador está dentro del LDCV, junto al escáner Leica P40.',
-  tiempoLimiteMs: 120000,
+  tiempoLimiteMs: 180000,
   puntosMax: 100,
 
   crearObjeto(THREE) {
@@ -62,56 +50,76 @@ const estacion = {
 
   montarMinijuego(contenedor, ctx) {
     const reto = generarReto();
-    let intentos = 0;
-    const { viga, elementos } = reto;
+    const { viga, cieloRaso, holgura, elementos } = reto;
+    const reales = conflictos(reto);
+    const seleccion = new Set();
+    const nuevosZMax = {};
+    let fase = 'detectar';
+    let intentosResolver = 0;
+    let resultadoDeteccion = null;
 
-    // CORTE TRANSVERSAL: eje vertical = cota (m). La viga es una franja horizontal;
-    // cada instalación es un rectángulo a su altura real. Clash = traslape vertical con la viga.
-    const W = 360, H = 300, IZQ = 46, ARR = 16, ABA = 34;
-    const zBajo = Math.floor((Math.min(...elementos.map((e) => e.zMin)) - 0.1) * 10) / 10;
-    const zAlto = Math.ceil((viga.zMax + 0.1) * 10) / 10;
+    // Corte transversal: eje vertical = cota (m)
+    const W = 360, H = 320, IZQ = 46, ARR = 16, ABA = 30;
+    const zBajo = Math.floor((cieloRaso - 0.08) * 10) / 10;
+    const zAlto = Math.ceil((viga.zMax + 0.08) * 10) / 10;
     const Yz = (z) => ARR + (zAlto - z) * ((H - ARR - ABA) / (zAlto - zBajo));
     const col = (W - IZQ) / elementos.length;
     const Xc = (i) => IZQ + col * (i + 0.5);
+    const zMaxDe = (e) => nuevosZMax[e.id] ?? e.zMax;
 
     contenedor.innerHTML = `
       <h2>Detective de clashes</h2>
-      <p><strong>Corte transversal</strong> del cielo técnico. Un <strong>clash</strong> ocurre cuando una
-      instalación ocupa parte del mismo espacio que la <strong>viga</strong>. Todas pasan cerca:
-      lean las cotas con cuidado y <strong>toquen la única que choca</strong>.</p>
+      <div class="tarjeta" style="padding:12px">
+        <p id="instruccion"></p>
+      </div>
       <svg id="corte" viewBox="0 0 ${W} ${H}" width="100%" style="background:#0e2748;border-radius:12px;touch-action:manipulation"></svg>
+      <p class="muted" style="font-size:.85rem;margin-top:-6px">
+        <span style="display:inline-block;width:14px;height:8px;background:#ffd34d;opacity:.7;margin-right:4px"></span>
+        holgura mínima ${Math.round(holgura * 100)} cm: el tope debe quedar en <strong>${(viga.zMin - holgura).toFixed(2)} m</strong> o menos ·
+        <span style="color:#ce93d8">- - cielo raso ${cieloRaso.toFixed(2)} m</span>: nada puede quedar debajo
+      </p>
       <div id="leyenda" class="muted" style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:.85rem"></div>
+      <div id="controles" style="display:flex;flex-direction:column;gap:10px"></div>
+      <button id="accion"></button>
       <p id="feedback" class="muted"></p>
     `;
     const svg = contenedor.querySelector('#corte');
     const leyenda = contenedor.querySelector('#leyenda');
+    const controles = contenedor.querySelector('#controles');
+    const btn = contenedor.querySelector('#accion');
     const fb = contenedor.querySelector('#feedback');
+    const instr = contenedor.querySelector('#instruccion');
 
-    const pintar = (marcado = null) => {
-      // Eje de cotas cada 10 cm
+    const pintar = () => {
       let eje = '';
       for (let z = zBajo; z <= zAlto + 1e-9; z = Math.round((z + 0.1) * 10) / 10) {
         const y = Yz(z);
-        const fuerte = Math.abs(z * 2 - Math.round(z * 2)) < 1e-6; // cada 0.5 m
-        eje += `<line x1="${IZQ}" y1="${y}" x2="${W}" y2="${y}" stroke="#ffffff" stroke-opacity="${fuerte ? 0.18 : 0.07}" />`
+        eje += `<line x1="${IZQ}" y1="${y}" x2="${W}" y2="${y}" stroke="#fff" stroke-opacity="0.08" />`
           + `<text x="${IZQ - 6}" y="${y + 3}" fill="#9aa5b1" font-size="10" text-anchor="end">${z.toFixed(1)}</text>`;
       }
-      const yVigaArr = Yz(viga.zMax), yVigaAba = Yz(viga.zMin);
+      const yVA = Yz(viga.zMax), yVB = Yz(viga.zMin), yHol = Yz(viga.zMin - holgura), yCR = Yz(cieloRaso);
       svg.innerHTML = `
         <defs><pattern id="rayado" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
           <rect width="8" height="8" fill="#cfd3d8"/><line x1="0" y1="0" x2="0" y2="8" stroke="#9aa5b1" stroke-width="3"/></pattern></defs>
-        ${eje}
-        <rect x="${IZQ}" y="${yVigaArr}" width="${W - IZQ}" height="${yVigaAba - yVigaArr}" fill="url(#rayado)" opacity="0.85" />
-        <line x1="${IZQ}" y1="${yVigaAba}" x2="${W}" y2="${yVigaAba}" stroke="#f2a900" stroke-dasharray="5 4" stroke-width="1.5" />
-        <text x="${W - 6}" y="${yVigaAba - 5}" fill="#0b1f3a" font-size="10" font-weight="700" text-anchor="end">fondo de viga ${viga.zMin.toFixed(2)} m</text>
         <text x="4" y="${ARR - 4}" fill="#9aa5b1" font-size="10">cota (m)</text>
-        <text x="${W - 6}" y="${yVigaArr + 14}" fill="#0b1f3a" font-size="11" font-weight="700" text-anchor="end">VIGA ${viga.zMin.toFixed(2)}–${viga.zMax.toFixed(2)} m</text>
+        ${eje}
+        <rect x="${IZQ}" y="${yVA}" width="${W - IZQ}" height="${yVB - yVA}" fill="url(#rayado)" opacity="0.85" />
+        <text x="${W - 6}" y="${yVA + 14}" fill="#0b1f3a" font-size="11" font-weight="700" text-anchor="end">VIGA ${viga.zMin.toFixed(2)}–${viga.zMax.toFixed(2)} m</text>
+        <rect x="${IZQ}" y="${yVB}" width="${W - IZQ}" height="${yHol - yVB}" fill="#ffd34d" opacity="0.45" />
+        <line x1="${IZQ}" y1="${yHol}" x2="${W}" y2="${yHol}" stroke="#ffd34d" stroke-width="1.5" />
+        <line x1="${IZQ}" y1="${yCR}" x2="${W}" y2="${yCR}" stroke="#ce93d8" stroke-width="2" stroke-dasharray="6 4" />
       ` + elementos.map((e, i) => {
-        const w = Math.min(col * 0.6, Math.max(14, e.ancho * 90));
-        const y1 = Yz(e.zMax), y2 = Yz(e.zMin);
-        const stroke = marcado === e.id ? (marcado === reto.culpableId ? '#2e9e5b' : '#d0453c') : 'transparent';
-        return `<g data-id="${e.id}" style="cursor:pointer">
-          <text x="${Xc(i)}" y="${H - 8}" fill="${e.color}" font-size="10" text-anchor="middle">${e.zMin.toFixed(2)}–${e.zMax.toFixed(2)}</text>
+        const zMax = zMaxDe(e), zMin = zMax - e.alto;
+        const w = Math.min(col * 0.6, Math.max(14, e.alto * 90));
+        const y1 = Yz(zMax), y2 = Yz(zMin);
+        let stroke = 'transparent';
+        if (fase === 'detectar' && seleccion.has(e.id)) stroke = '#f2a900';
+        if (fase !== 'detectar' && reales.includes(e.id)) {
+          const st = clasificar({ zMax }, viga, holgura) === 'ok' && zMin >= cieloRaso - 1e-9;
+          stroke = st ? '#2e9e5b' : '#d0453c';
+        }
+        return `<g data-id="${e.id}" data-zmin="${zMin.toFixed(2)}" data-zmax="${zMax.toFixed(2)}" style="cursor:pointer">
+          <text x="${Xc(i)}" y="${H - 8}" fill="${e.color}" font-size="10" text-anchor="middle">${zMin.toFixed(2)}–${zMax.toFixed(2)}</text>
           <rect x="${Xc(i) - w / 2}" y="${y1}" width="${w}" height="${y2 - y1}" fill="${e.color}" stroke="${stroke}" stroke-width="4" rx="${e.tipo === 'ducto' || e.tipo === 'bandeja' ? 2 : w / 2}" />
           <text x="${Xc(i)}" y="${y2 + 13}" fill="#f7f7f5" font-size="11" font-weight="700" text-anchor="middle">${i + 1}</text>
           <rect x="${Xc(i) - col / 2 + 2}" y="${ARR}" width="${col - 4}" height="${H - ARR}" fill="transparent" />
@@ -120,44 +128,115 @@ const estacion = {
       leyenda.innerHTML = elementos.map((e, i) => `<span><span style="display:inline-block;width:10px;height:10px;background:${e.color};border-radius:2px;margin-right:6px"></span>${i + 1}. ${e.nombre}</span>`).join('');
     };
 
+    const irDetectar = () => {
+      instr.innerHTML = `<strong>Fase 1 · Detectar.</strong> Marquen <strong>todos</strong> los elementos en conflicto:
+        <br>• <strong>choque duro</strong>: se mete en la viga;
+        <br>• <strong>choque blando</strong>: no la toca, pero invade la franja amarilla de holgura (${Math.round(holgura * 100)} cm).
+        <br>Puede haber más de uno.`;
+      btn.textContent = 'Listo: esos son todos';
+      pintar();
+    };
+
+    const irResolver = () => {
+      fase = 'resolver';
+      const { aciertos, falsos, omitidos, total } = resultadoDeteccion;
+      fb.innerHTML = `Detección: <strong>${aciertos}/${total}</strong> conflictos encontrados`
+        + (falsos ? `, ${falsos} marcado(s) de más` : '') + (omitidos ? `, ${omitidos} sin detectar` : '') + '.';
+      instr.innerHTML = `<strong>Fase 2 · Resolver.</strong> Los conflictos reales están en rojo. Muevan cada uno
+        <strong>debajo de la franja de holgura</strong> sin bajar del <strong>cielo raso</strong>. Verde = resuelto.`;
+      controles.innerHTML = reales.map((id) => {
+        const i = elementos.findIndex((e) => e.id === id);
+        const e = elementos[i];
+        return `<label class="muted">${i + 1}. ${e.nombre} · tope: <strong id="v-${id}">${e.zMax.toFixed(2)}</strong> m
+          <input type="range" data-mover="${id}" min="${(cieloRaso + e.alto - 0.05).toFixed(2)}" max="${(viga.zMax).toFixed(2)}" step="0.01" value="${e.zMax.toFixed(2)}" />
+        </label>`;
+      }).join('');
+      btn.textContent = 'Verificar reubicación';
+      pintar();
+    };
+
+    const terminar = (resol) => {
+      const det = resultadoDeteccion;
+      ctx.terminar({
+        completado: resol.resueltos === resol.total,
+        aciertos: det.aciertos + resol.resueltos,
+        intentos: intentosResolver,
+        detalle: {
+          vigaZMin: viga.zMin, vigaZMax: viga.zMax, cieloRaso, holgura,
+          conflictos: reales.map((id) => {
+            const e = elementos.find((x) => x.id === id);
+            const d = resol.detalle.find((x) => x.id === id);
+            return { nombre: e.nombre, alto: e.alto, zMaxOriginal: e.zMax, tipo: clasificar(e, viga, holgura), zMaxFinal: d.zMax, resuelto: d.resuelto };
+          }),
+          deteccion: { aciertos: det.aciertos, falsos: det.falsos, omitidos: det.omitidos, total: det.total },
+          resolucion: { resueltos: resol.resueltos, total: resol.total },
+        },
+      });
+    };
+
     const onToque = (ev) => {
+      if (fase !== 'detectar') return;
       const g = ev.target.closest('g[data-id]');
       if (!g) return;
-      intentos++;
       const id = g.dataset.id;
-      const r = evaluar(reto, id);
-      pintar(id);
-      const el = elementos.find((e) => e.id === id);
-      if (r.correcto) {
-        fb.innerHTML = `<span style="color:var(--ok)">¡Correcto! ${el.nombre} (tope ${el.zMax.toFixed(2)} m) invade la viga.</span>`;
-        svg.removeEventListener('click', onToque);
-        setTimeout(() => ctx.terminar({ completado: true, aciertos: 1, intentos, detalle: resumenClash(reto, id) }), 1000);
+      if (seleccion.has(id)) seleccion.delete(id); else seleccion.add(id);
+      btn.textContent = `Listo: esos son todos (${seleccion.size})`;
+      pintar();
+    };
+    const onMover = (ev) => {
+      const id = ev.target.dataset?.mover;
+      if (!id) return;
+      nuevosZMax[id] = parseFloat(ev.target.value);
+      contenedor.querySelector(`#v-${id}`).textContent = nuevosZMax[id].toFixed(2);
+      pintar();
+    };
+    const onAccion = () => {
+      if (fase === 'detectar') {
+        resultadoDeteccion = evaluarDeteccion(reto, [...seleccion]);
+        irResolver();
         return;
       }
-      if (intentos >= INTENTOS_MAX) {
-        const c = elementos.find((e) => e.id === reto.culpableId);
-        fb.innerHTML = `<span style="color:var(--error)">No. Era ${c.nombre}: su tope ${c.zMax.toFixed(2)} m está dentro del rango de la viga.</span>`;
-        svg.removeEventListener('click', onToque);
-        setTimeout(() => ctx.terminar({ completado: false, aciertos: 0, intentos, detalle: resumenClash(reto, id) }), 2200);
+      intentosResolver++;
+      const resol = evaluarResolucion(reto, nuevosZMax);
+      if (resol.resueltos === resol.total) {
+        fb.innerHTML += `<br><span style="color:var(--ok)">¡Coordinación resuelta! Todos los elementos cumplen holgura y cielo raso.</span>`;
+        btn.disabled = true;
+        setTimeout(() => terminar(resol), 1300);
         return;
       }
-      fb.innerHTML = `<span style="color:var(--error)">${el.nombre} pasa por debajo (tope ${el.zMax.toFixed(2)} m &lt; ${viga.zMin.toFixed(2)} m).</span> Queda 1 intento.`;
-      ctx.mostrarAyuda('Comparen el tope de cada elemento con el fondo de la viga.');
+      const malos = resol.detalle.filter((d) => !d.resuelto).map((d) => {
+        const i = elementos.findIndex((e) => e.id === d.id);
+        return `${i + 1} (${!d.holguraOk ? 'aún sin holgura' : 'bajo el cielo raso'})`;
+      });
+      if (intentosResolver >= INTENTOS_RESOLVER) {
+        fb.innerHTML += `<br><span style="color:var(--error)">Quedaron sin resolver: ${malos.join(', ')}.</span>`;
+        btn.disabled = true;
+        setTimeout(() => terminar(resol), 2000);
+        return;
+      }
+      fb.innerHTML = `<span style="color:var(--error)">Falta: ${malos.join(', ')}.</span> Queda 1 intento.`;
+      ctx.mostrarAyuda('El tope de cada elemento debe quedar en o bajo el borde inferior de la franja amarilla, y su fondo sobre la línea del cielo raso.');
     };
 
     svg.addEventListener('click', onToque);
-    pintar();
-    limpiar = () => svg.removeEventListener('click', onToque);
+    controles.addEventListener('input', onMover);
+    btn.addEventListener('click', onAccion);
+    irDetectar();
+    limpiar = () => {
+      svg.removeEventListener('click', onToque);
+      controles.removeEventListener('input', onMover);
+      btn.removeEventListener('click', onAccion);
+    };
   },
 
   explicarSolucion(d) {
-    if (!d?.culpableNombre) return [];
+    if (!d?.conflictos) return [];
+    const limite = (d.vigaZMin - d.holgura).toFixed(2);
     return [
-      `La viga ocupa de ${d.vigaZMin.toFixed(2)} a ${d.vigaZMax.toFixed(2)} m.`,
-      `Choca: ${d.culpableNombre} (de ${d.culpableZMin.toFixed(2)} a ${d.culpableZMax.toFixed(2)} m): su tope supera el fondo de la viga.`,
-      'Regla: hay interferencia si los rangos de cota se traslapan (tope del elemento > fondo de la viga).',
-      d.tocadoNombre && d.tocadoNombre !== d.culpableNombre ? `Ustedes eligieron por último: ${d.tocadoNombre}.` : '',
-    ].filter(Boolean);
+      `Viga de ${d.vigaZMin.toFixed(2)} a ${d.vigaZMax.toFixed(2)} m; holgura mínima ${Math.round(d.holgura * 100)} cm (tope ≤ ${limite} m); cielo raso en ${d.cieloRaso.toFixed(2)} m.`,
+      `Había ${d.conflictos.length} conflicto(s). Ustedes detectaron ${d.deteccion.aciertos}${d.deteccion.falsos ? `, marcaron ${d.deteccion.falsos} de más` : ''}${d.deteccion.omitidos ? ` y omitieron ${d.deteccion.omitidos}` : ''}.`,
+      ...d.conflictos.map((c) => `${c.nombre}: choque ${c.tipo} (tope ${c.zMaxOriginal.toFixed(2)} m). Válido con tope entre ${(d.cieloRaso + c.alto).toFixed(2)} y ${limite} m → ustedes ${c.zMaxFinal.toFixed(2)} m ${c.resuelto ? '✓' : '✗'}.`),
+    ];
   },
 
   desmontar() {
@@ -165,10 +244,14 @@ const estacion = {
     limpiar = () => {};
   },
 
+  /** 50 pts detección (aciertos − falsos) + 50 pts resolución, ajustado por tiempo. */
   calcularPuntaje(resultado, tiempoUsadoMs) {
-    if (!resultado.completado) return 0;
-    const base = puntajePorTiempo(estacion.puntosMax, tiempoUsadoMs, estacion.tiempoLimiteMs);
-    return Math.max(0, base - (resultado.intentos - 1) * 25);
+    const d = resultado.detalle;
+    if (!d?.deteccion) return 0;
+    const det = 50 * Math.max(0, d.deteccion.aciertos - d.deteccion.falsos) / Math.max(1, d.deteccion.total);
+    const res = 50 * d.resolucion.resueltos / Math.max(1, d.resolucion.total);
+    const factor = puntajePorTiempo(1000, tiempoUsadoMs, estacion.tiempoLimiteMs) / 1000;
+    return Math.round((det + res) * factor);
   },
 };
 

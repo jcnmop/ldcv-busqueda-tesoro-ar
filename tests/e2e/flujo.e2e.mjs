@@ -175,7 +175,9 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
     if (Math.hypot(pObj[0] - pc[0], pObj[1] - pc[1]) > 170) break;
     await page.waitForTimeout(250);
   }
+  const pColl = await proyectar('coleccionable');
   await page.mouse.click(pObj[0], pObj[1]);
+  console.log('  toque objeto en', pObj.map(Math.round).join(','), 'pieza en', pColl.map(Math.round).join(','), '→', await page.evaluate(() => globalThis.__ultimoToque + ' ' + globalThis.__ramaToque));
   await page.waitForTimeout(900);
   ok(await page.$eval('#minijuego', (el) => el.hidden), `${est.nombre}: tocar el objeto solo reacciona (no abre el reto)`);
 
@@ -244,22 +246,31 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
     }
     await page.click('#verificar');
   } else if (id === 'clash-bim') {
-    // Leer el rango de la viga y los topes de cada elemento del propio SVG, como lo haría un jugador atento
+    // FASE 1: detectar todos los conflictos leyendo cotas (tope > fondo de viga − 5 cm)
     const vigaTxt = await page.$$eval('#corte text', (ts) => ts.map((t) => t.textContent).find((t) => t.startsWith('VIGA')));
     const vigaZMin = +vigaTxt.match(/VIGA\s*([\d.]+)/)[1];
-    const elementos = await page.$$eval('#corte g[data-id]', (gs) => gs.map((g) => ({ id: g.dataset.id, txt: g.querySelector('text').textContent })));
-    const culpable = elementos.find((e) => +e.txt.split('–')[1] > vigaZMin);
-    ok(!!culpable, 'Clash: culpable identificado por cotas');
-    // Primer toque deliberadamente malo para probar la retroalimentación
-    const malo = elementos.find((e) => e.id !== culpable.id);
-    await page.click(`#corte g[data-id="${malo.id}"] rect:nth-of-type(2)`);
-    ok((await page.textContent('#feedback')).includes('por debajo'), 'Clash: retroalimentación del intento fallido');
-    await page.click(`#corte g[data-id="${culpable.id}"] rect:nth-of-type(2)`);
+    const elementos = await page.$$eval('#corte g[data-id]', (gs) => gs.map((g) => ({ id: g.dataset.id, zMax: +g.dataset.zmax })));
+    const enConflicto = elementos.filter((e) => e.zMax > vigaZMin - 0.05 + 1e-6);
+    ok(enConflicto.length >= 1, `Clash: ${enConflicto.length} conflicto(s) identificados por cotas`);
+    for (const e of enConflicto) await page.click(`#corte g[data-id="${e.id}"] rect:nth-of-type(2)`);
+    await page.screenshot({ path: resolve(tmp, 'clash-fase1.png') });
+    await page.click('#accion');
+    ok((await page.textContent('#feedback')).includes(`${enConflicto.length}/${enConflicto.length}`), 'Clash: detección perfecta reconocida');
+    // FASE 2: reubicar cada conflicto en el límite de la holgura
+    const limite = (vigaZMin - 0.05).toFixed(2);
+    const deslizadores = await page.$$eval('[data-mover]', (xs) => xs.map((x) => x.dataset.mover));
+    ok(deslizadores.length === enConflicto.length, 'Clash: un control de reubicación por conflicto');
+    for (const d of deslizadores) {
+      await page.evaluate(([idm, v]) => { const el = document.querySelector(`[data-mover="${idm}"]`); el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); }, [d, limite]);
+    }
+    await page.screenshot({ path: resolve(tmp, 'clash-fase2.png') });
+    await page.click('#accion');
+    ok((await page.textContent('#feedback')).includes('resuelta'), 'Clash: reubicación válida (holgura y cielo raso)');
   } else if (id === 'presa-hidrostatica') {
     const texto = await page.textContent('#minijuego');
-    const h = +texto.match(/h = ([\d.]+) m de agua/)[1];
+    const h = +texto.match(/h = (\d+) m de agua/)[1];
     await page.evaluate((v) => { const s = document.querySelector('#y'); s.value = v; s.dispatchEvent(new Event('input')); }, (h / 3).toFixed(2));
-    const correcta = (9.81 * h * h / 2).toFixed(1);
+    const correcta = String(10 * h * h / 2);
     await page.click(`#opciones button:has-text("${correcta} kN/m")`);
     ok(true, `Presa: h = ${h} m → F = ${correcta} kN/m a ${(h / 3).toFixed(2)} m`);
     await page.click('#verificar');

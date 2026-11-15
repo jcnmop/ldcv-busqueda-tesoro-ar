@@ -172,18 +172,20 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
     const golpes = raycaster.intersectObject(seguidor, true);
     for (const g of golpes) {
       const c = coleccionableDe(g.object);
-      if (c) return emitir('coleccionable', g, c);
+      if (c) { globalThis.__ramaToque = 'golpe-pieza'; return emitir('coleccionable', g, c); }
     }
     // Tolerancia para dedos, en orden de prioridad:
     //   1. cerca de la pieza (margen chico)  2. golpe directo al objeto
     //   3. dentro de la silueta del objeto   4. cerca de la pieza (margen amplio)
     const coleccionables = [];
     seguidor.traverse((o) => { if (o.userData?.coleccionable && o.visible) coleccionables.push(o); });
-    for (const c of coleccionables) if (dentro(p, rectPantalla(c, 0.25))) return emitir('coleccionable', null, c);
-    if (golpes.length) return emitir('objeto', golpes[0], golpes[0].object);
+    // (globalThis.__ramaToque: diagnóstico de qué regla decidió el toque)
+    for (const c of coleccionables) if (dentro(p, rectPantalla(c, 0.1))) { globalThis.__ramaToque = 'cerca-pieza'; return emitir('coleccionable', null, c); }
+    if (golpes.length) { globalThis.__ramaToque = 'golpe-objeto'; return emitir('objeto', golpes[0], golpes[0].object); }
     const objetos = manipulador.children[0]?.children.filter((o) => !o.userData?.coleccionable) ?? [];
-    for (const o of objetos) if (dentro(p, rectPantalla(o, 0.1))) return emitir('objeto', null, o);
-    for (const c of coleccionables) if (dentro(p, rectPantalla(c, 0.6))) return emitir('coleccionable', null, c);
+    for (const o of objetos) if (dentro(p, rectPantalla(o, 0.1))) { globalThis.__ramaToque = 'silueta-objeto'; return emitir('objeto', null, o); }
+    for (const c of coleccionables) if (dentro(p, rectPantalla(c, 0.4))) { globalThis.__ramaToque = 'zona-pieza'; return emitir('coleccionable', null, c); }
+    globalThis.__ramaToque = 'nada';
   }
   const emitir = (tipo, golpe, obj) => oyentesToque.forEach((fn) => fn(tipo, golpe, obj));
 

@@ -114,7 +114,7 @@ export function construirPuenteEquipo(THREE, estados, { resaltar, secuencial = f
  * Pieza en miniatura, dorada y brillante, para "atraparla" en la RA (diseño Z arriba).
  * Lleva userData.coleccionable = true y un halo que facilita el toque.
  */
-export function piezaMini(THREE, piezaId, tam = 0.26) {
+export function piezaMini(THREE, piezaId, tam = 0.2) {
   const g = new THREE.Group();
   const fuente = piezaId ? construirPiezas(THREE)[piezaId] : null;
   const oro = new THREE.MeshStandardMaterial({ color: 0xf2a900, emissive: 0x6a4700, metalness: 0.7, roughness: 0.3 });
@@ -136,7 +136,7 @@ export function piezaMini(THREE, piezaId, tam = 0.26) {
   }
   g.add(modelo);
   const halo = new THREE.Mesh(
-    new THREE.SphereGeometry(tam * 0.75, 20, 16),
+    new THREE.SphereGeometry(tam * 0.6, 20, 16),
     new THREE.MeshBasicMaterial({ color: 0xffd34d, transparent: true, opacity: 0.22, depthWrite: false }),
   );
   g.add(halo);

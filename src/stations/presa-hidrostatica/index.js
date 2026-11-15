@@ -106,10 +106,12 @@ const estacion = {
 
     contenedor.innerHTML = `
       <h2>Presa y empuje hidrostático</h2>
-      <p>El embalse tiene <strong>h = ${h.toFixed(1)} m</strong> de agua contra el paramento vertical
-      de la presa (γ = ${GAMMA} kN/m³, por metro de ancho).</p>
-      <p><strong>1.</strong> Muevan la flecha roja a la altura donde actúa la <strong>fuerza resultante</strong>.<br>
-      <strong>2.</strong> Elijan su <strong>magnitud</strong>.</p>
+      <p>El embalse tiene <strong>h = ${h} m de agua</strong> contra la presa. El agua empuja más
+      cuanto más profundo: el empuje se dibuja como un <strong>triángulo de presiones</strong> (rojo).
+      Usen γ ≈ ${GAMMA} kN/m³ y trabajen por metro de ancho.</p>
+      <p><strong>1.</strong> Muevan la flecha amarilla <strong>F</strong> a la altura donde actúa la fuerza total
+      (el centro del triángulo).<br>
+      <strong>2.</strong> Elijan cuánto vale F: es el <strong>área del triángulo</strong> = base × altura ÷ 2.</p>
       <svg id="presa" viewBox="0 0 ${W} ${Hs}" width="100%" style="background:#0e2748;border-radius:12px"></svg>
       <label class="muted">Altura de la resultante desde el fondo: <strong id="ytxt"></strong> m</label>
       <input id="y" type="range" min="0" max="${h}" step="0.05" value="${(h / 2).toFixed(2)}" />
@@ -125,7 +127,7 @@ const estacion = {
     const fb = contenedor.querySelector('#feedback');
 
     ops.innerHTML = reto.opciones.map((o) => `
-      <button class="secundario" data-op="${o.id}" style="padding:12px 8px">${o.valor.toFixed(1)} kN/m</button>`).join('');
+      <button class="secundario" data-op="${o.id}" style="padding:12px 8px">${o.valor} kN/m</button>`).join('');
 
     const dibujar = (mostrarCorrecta = false) => {
       const y = parseFloat(slider.value);
@@ -139,10 +141,10 @@ const estacion = {
         <text x="14" y="${sup - 6}" fill="#90caf9" font-size="11">▽ nivel del agua</text>
         <polygon points="${xPresa},${TOPE - 10} ${xPresa + 34},${TOPE - 10} ${xPresa + 120},${BASE} ${xPresa},${BASE}" fill="#9aa5b1" />
         <polygon points="${xPresa},${sup} ${xPresa},${BASE} ${xPresa - anchoMax},${BASE}" fill="#d0453c" opacity="0.28" />
-        <text x="${xPresa - anchoMax}" y="${BASE + 14}" fill="#ef9a9a" font-size="10">p máx = γ·h = ${(GAMMA * h).toFixed(1)} kPa</text>
+        <text x="${xPresa - anchoMax}" y="${BASE + 14}" fill="#ef9a9a" font-size="10">base = γ·h = ${GAMMA}×${h} = ${GAMMA * h} kPa</text>
         <line x1="6" y1="${BASE}" x2="${W - 6}" y2="${BASE}" stroke="#f7f7f5" stroke-width="2" />
         <line x1="${xPresa + 140}" y1="${sup}" x2="${xPresa + 140}" y2="${BASE}" stroke="#f7f7f5" stroke-width="1" />
-        <text x="${xPresa + 144}" y="${(sup + BASE) / 2}" fill="#f7f7f5" font-size="11">h = ${h.toFixed(1)} m</text>
+        <text x="${xPresa + 136}" y="${(sup + BASE) / 2}" fill="#f7f7f5" font-size="11" text-anchor="end">h = ${h} m</text>
         <g>
           <line x1="${xPresa - 90}" y1="${Yp(y)}" x2="${xPresa - 8}" y2="${Yp(y)}" stroke="#f2a900" stroke-width="5" />
           <polygon points="${xPresa - 2},${Yp(y)} ${xPresa - 16},${Yp(y) - 8} ${xPresa - 16},${Yp(y) + 8}" fill="#f2a900" />
@@ -172,7 +174,7 @@ const estacion = {
       const detalle = { h, F: reto.F, yR: reto.yR, yPropuesta: y, opcion: reto.opciones.find((o) => o.id === opcionElegida), alturaOk: r.alturaOk, fuerzaOk: r.fuerzaOk };
       if (r.correcto) {
         dibujar(true);
-        fb.innerHTML = `<span style="color:var(--ok)">¡Correcto! F = ${reto.F.toFixed(1)} kN/m actuando a ${reto.yR.toFixed(2)} m del fondo.</span>`;
+        fb.innerHTML = `<span style="color:var(--ok)">¡Correcto! F = ${GAMMA * h} × ${h} ÷ 2 = ${reto.F} kN/m, a h/3 = ${reto.yR.toFixed(2)} m del fondo.</span>`;
         btn.disabled = true;
         setTimeout(() => ctx.terminar({ completado: true, aciertos: 2, intentos, detalle }), 1200);
         return;
@@ -186,7 +188,7 @@ const estacion = {
         return;
       }
       fb.innerHTML = `<span style="color:var(--error)">Revisen: ${partes.join(' y ')}.</span> Queda 1 intento.`;
-      ctx.mostrarAyuda('Pista: el diagrama de presiones es un triángulo. ¿Dónde está su centroide y cuánto vale su área?');
+      ctx.mostrarAyuda(`Pista: el centro de un triángulo está a 1/3 de su base (aquí, desde el fondo). Área = ${GAMMA * h} × ${h} ÷ 2.`);
     };
 
     slider.addEventListener('input', onInput);
@@ -203,10 +205,10 @@ const estacion = {
   explicarSolucion(d) {
     if (d?.h == null) return [];
     return [
-      `Embalse de h = ${d.h.toFixed(1)} m. La presión crece con la profundidad: p = γ·(h − z), máxima en el fondo γ·h = ${(GAMMA * d.h).toFixed(1)} kPa.`,
-      `La resultante es el área del triángulo de presiones: F = γ·h²/2 = ${d.F.toFixed(1)} kN por metro de ancho.`,
-      `Actúa en el centroide del triángulo: h/3 = ${d.yR.toFixed(2)} m desde el fondo.`,
-      `Ustedes: altura ${Number(d.yPropuesta).toFixed(2)} m ${d.alturaOk ? '✓' : '✗'}, magnitud ${d.opcion ? d.opcion.valor.toFixed(1) + ' kN/m (' + d.opcion.formula + ')' : '—'} ${d.fuerzaOk ? '✓' : '✗'}.`,
+      `Embalse de h = ${d.h} m. La presión crece con la profundidad: en el fondo vale γ·h = ${GAMMA}×${d.h} = ${GAMMA * d.h} kPa (γ ≈ ${GAMMA} kN/m³).`,
+      `F es el área del triángulo de presiones: ${GAMMA * d.h} × ${d.h} ÷ 2 = ${d.F} kN por metro de ancho.`,
+      `Actúa en el centro del triángulo: h/3 = ${d.yR.toFixed(2)} m desde el fondo.`,
+      `Ustedes: altura ${Number(d.yPropuesta).toFixed(2)} m ${d.alturaOk ? '✓' : '✗'}, magnitud ${d.opcion ? d.opcion.valor + ' kN/m' : '—'} ${d.fuerzaOk ? '✓' : '✗ (' + (d.opcion?.formula ?? '') + ')'}.`,
     ];
   },
 

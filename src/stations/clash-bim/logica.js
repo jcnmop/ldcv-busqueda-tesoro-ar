@@ -1,57 +1,100 @@
 /**
- * Lógica pura de "Detective de clashes".
- * Se genera una vista en planta de un cielo técnico con elementos MEP y una viga.
- * Exactamente UN par de elementos colisiona en su cota (se cruzan en planta y sus
- * rangos de altura se traslapan). El equipo debe tocar el elemento que choca con la viga.
+ * Lógica pura de "Detective de clashes" (coordinación BIM en dos fases).
  *
- * Modelo: cada elemento tiene { id, tipo, x1,y1,x2,y2 (planta, en m), zMin, zMax (m) }.
- * La viga va horizontal a lo ancho del área. Los ductos/tuberías la cruzan en vertical.
+ * Corte transversal de un cielo técnico: una viga de concreto y 5 instalaciones (MEP).
+ * Cada elemento tiene un rango de cota [zMin, zMax] (m). Reglas de coordinación:
+ *   - CHOQUE DURO  : el elemento ocupa espacio de la viga        → zMax > vigaZMin
+ *   - CHOQUE BLANDO: no la toca pero no deja la holgura mínima    → vigaZMin − HOLGURA < zMax ≤ vigaZMin
+ *   - OK           : zMax ≤ vigaZMin − HOLGURA
+ * Además nada puede quedar por debajo del CIELO RASO (zMin ≥ cieloRaso).
+ *
+ * Fase 1 (detectar): marcar TODOS los elementos en conflicto (duros y blandos).
+ * Fase 2 (resolver): reubicar cada elemento en conflicto para que quede OK y sobre el cielo raso.
  */
 
-const TIPOS = [
-  { tipo: 'ducto', nombre: 'Ducto de aire', ancho: 0.6, color: '#9aa5b1' },
-  { tipo: 'tuberia', nombre: 'Tubería de agua potable', ancho: 0.2, color: '#1e88e5' },
-  { tipo: 'sanitaria', nombre: 'Tubería sanitaria', ancho: 0.3, color: '#8d6e63' },
-  { tipo: 'bandeja', nombre: 'Bandeja eléctrica', ancho: 0.4, color: '#f2a900' },
-  { tipo: 'rociadores', nombre: 'Tubería de rociadores', ancho: 0.15, color: '#d0453c' },
+export const HOLGURA = 0.05; // 5 cm de holgura mínima para mantenimiento
+
+export const TIPOS = [
+  { tipo: 'ducto', nombre: 'Ducto de aire', alto: 0.40, color: '#9aa5b1' },
+  { tipo: 'tuberia', nombre: 'Tubería de agua potable', alto: 0.10, color: '#1e88e5' },
+  { tipo: 'sanitaria', nombre: 'Tubería sanitaria', alto: 0.16, color: '#8d6e63' },
+  { tipo: 'bandeja', nombre: 'Bandeja eléctrica', alto: 0.12, color: '#f2a900' },
+  { tipo: 'rociadores', nombre: 'Tubería de rociadores', alto: 0.08, color: '#d0453c' },
 ];
 
-const AREA = { ancho: 10, alto: 6 }; // m
+const r2 = (x) => Math.round(x * 100) / 100;
 
+/** Clasifica un elemento respecto a la viga. */
+export function clasificar(e, viga, holgura = HOLGURA) {
+  if (e.zMax > viga.zMin + 1e-9) return 'duro';
+  if (e.zMax > viga.zMin - holgura + 1e-9) return 'blando';
+  return 'ok';
+}
+
+/**
+ * @param {() => number} aleatorio
+ */
 export function generarReto(aleatorio = Math.random) {
-  // Viga: horizontal en y = 3, peralte 0.5 m, fondo de viga a cota zMin
-  const vigaZMax = 3.5;                          // nivel de losa
-  const vigaZMin = vigaZMax - (0.5 + Math.round(aleatorio() * 2) * 0.1); // 0.5..0.7 de peralte
-  const viga = { id: 'viga', tipo: 'viga', nombre: 'Viga de concreto', x1: 0, y1: 3, x2: AREA.ancho, y2: 3, zMin: vigaZMin, zMax: vigaZMax, ancho: 0.4, color: '#f7f7f5' };
+  const vigaZMax = 3.5;
+  const peralte = 0.5 + Math.round(aleatorio() * 2) * 0.1;     // 0.5 .. 0.7 m
+  const viga = { zMin: r2(vigaZMax - peralte), zMax: vigaZMax };
+  // Espacio útil entre cielo raso y fondo de viga: el ducto (0.40) cabe con poco margen
+  const cieloRaso = r2(viga.zMin - HOLGURA - 0.40 - (0.04 + Math.round(aleatorio() * 4) * 0.01));
 
-  // 4 a 5 elementos que cruzan la viga en planta; solo uno con cota que la invade
-  const n = 4 + Math.floor(aleatorio() * 2);
-  const tipos = [...TIPOS].sort(() => aleatorio() - 0.5).slice(0, n);
-  const culpable = Math.floor(aleatorio() * n);
-  const elementos = tipos.map((t, i) => {
-    const x = 1 + (i + 0.5) * ((AREA.ancho - 2) / n) + (aleatorio() - 0.5) * 0.6;
+  // Cuántos conflictos (1 a 3) y de qué tipo
+  const orden = [...TIPOS].sort(() => aleatorio() - 0.5);
+  const nConflictos = 1 + Math.floor(aleatorio() * 3);
+  const elementos = orden.map((t, i) => {
     let zMax;
-    if (i === culpable) {
-      // invade la viga entre 4 y 15 cm: se nota leyendo cotas, no a simple vista
-      zMax = vigaZMin + 0.04 + aleatorio() * 0.11;
+    if (i < nConflictos) {
+      const duro = i === 0 || aleatorio() < 0.5; // al menos un choque duro
+      zMax = duro
+        ? viga.zMin + 0.03 + Math.round(aleatorio() * 10) * 0.01          // atraviesa 3–13 cm
+        : viga.zMin - 0.01 - Math.round(aleatorio() * 3) * 0.01;          // le faltan 1–4 cm de holgura
     } else {
-      // pasa por debajo con holgura pequeña (2 a 10 cm): obliga a leer las cotas con cuidado
-      zMax = vigaZMin - 0.02 - aleatorio() * 0.08;
+      zMax = viga.zMin - HOLGURA - 0.01 - Math.round(aleatorio() * 8) * 0.01; // cumple (6–14 cm)
     }
-    const espesor = t.tipo === 'ducto' ? 0.4 : t.ancho;
-    return { id: `e${i}`, ...t, x1: x, y1: 0.3, x2: x, y2: AREA.alto - 0.3, zMin: +(zMax - espesor).toFixed(2), zMax: +zMax.toFixed(2) };
+    zMax = r2(zMax);
+    let zMin = r2(zMax - t.alto);
+    // Los que cumplen tampoco pueden quedar bajo el cielo raso
+    if (i >= nConflictos && zMin < cieloRaso) { zMin = r2(cieloRaso + 0.01); zMax = r2(zMin + t.alto); }
+    return { id: `e${i}`, ...t, zMin, zMax };
   });
-  return { area: AREA, viga, elementos, culpableId: `e${culpable}` };
+  // Barajar la posición visual (columna) para que los conflictos no queden siempre a la izquierda
+  for (let i = elementos.length - 1; i > 0; i--) {
+    const j = Math.floor(aleatorio() * (i + 1));
+    [elementos[i], elementos[j]] = [elementos[j], elementos[i]];
+  }
+  return { viga, cieloRaso, holgura: HOLGURA, elementos };
 }
 
-/** Un elemento colisiona con la viga si se cruzan en planta y sus cotas se traslapan. */
-export function colisiona(elemento, viga) {
-  const cruzaEnPlanta = Math.min(elemento.y1, elemento.y2) <= viga.y1 && Math.max(elemento.y1, elemento.y2) >= viga.y1
-    && elemento.x1 >= viga.x1 && elemento.x1 <= viga.x2;
-  const traslapeZ = elemento.zMax > viga.zMin && elemento.zMin < viga.zMax;
-  return cruzaEnPlanta && traslapeZ;
+/** ids de los elementos en conflicto. */
+export function conflictos(reto) {
+  return reto.elementos.filter((e) => clasificar(e, reto.viga, reto.holgura) !== 'ok').map((e) => e.id);
 }
 
-export function evaluar(reto, idTocado) {
-  return { correcto: idTocado === reto.culpableId };
+/** Fase 1: compara la selección del equipo con los conflictos reales. */
+export function evaluarDeteccion(reto, seleccion) {
+  const reales = new Set(conflictos(reto));
+  const sel = new Set(seleccion);
+  const aciertos = [...sel].filter((id) => reales.has(id)).length;
+  const falsos = [...sel].filter((id) => !reales.has(id)).length;
+  const omitidos = [...reales].filter((id) => !sel.has(id)).length;
+  return { aciertos, falsos, omitidos, total: reales.size, perfecto: falsos === 0 && omitidos === 0 };
+}
+
+/**
+ * Fase 2: `nuevosZMax` = { id: zMax propuesto } para los elementos a reubicar.
+ * Un elemento queda resuelto si cumple la holgura y no baja del cielo raso.
+ */
+export function evaluarResolucion(reto, nuevosZMax) {
+  const detalle = conflictos(reto).map((id) => {
+    const e = reto.elementos.find((x) => x.id === id);
+    const zMax = r2(nuevosZMax[id] ?? e.zMax);
+    const zMin = r2(zMax - e.alto);
+    const holguraOk = zMax <= r2(reto.viga.zMin - reto.holgura) + 1e-9;
+    const cieloOk = zMin >= reto.cieloRaso - 1e-9;
+    return { id, zMax, zMin, holguraOk, cieloOk, resuelto: holguraOk && cieloOk };
+  });
+  return { detalle, resueltos: detalle.filter((d) => d.resuelto).length, total: detalle.length };
 }

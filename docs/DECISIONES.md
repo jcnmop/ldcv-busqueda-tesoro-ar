@@ -118,3 +118,16 @@ el puente usa el perfil 'alta' y va centrado en el póster (menos brazo de palan
 ## 2026-11-15 · Estación 5: Presa y empuje hidrostático
 **Motivo:** pedido de un reto de hidráulica. F = γh²/2 por metro de ancho, aplicada a h/3
 del fondo; distractores con errores típicos (γh², γh, γh²/3). Tocar la presa cambia el nivel.
+
+## 2026-11-15 · Clash en dos fases: detectar (duros y blandos) y resolver
+**Motivo:** la versión de "un solo culpable" era muy básica. Ahora refleja la coordinación BIM
+real: 1–3 conflictos, choque blando por holgura de 5 cm, y reubicación respetando el cielo raso.
+El espacio útil se genera para que el ducto quepa justo (obliga a precisión).
+
+## 2026-11-15 · Presa con γ ≈ 10 kN/m³ y h par
+**Motivo:** el cálculo con 9.81 y decimales distraía del concepto. F = área del triángulo,
+siempre entera; distractores: olvidar ÷2, solo presión de fondo, olvidar γ.
+
+## 2026-11-15 · Pieza dorada más pequeña y órbita más corta
+**Motivo:** el halo ocupaba ~40 % del póster y "robaba" toques al objeto; en su extremo la
+pieza salía de la pantalla. Diagnóstico en `globalThis.__ramaToque`.
