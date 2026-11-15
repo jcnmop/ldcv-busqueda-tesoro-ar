@@ -13,6 +13,15 @@ import { pantallaFinal } from './ui/final.js';
 
 const claveEvento = import.meta.env.VITE_CLAVE_EVENTO || 'desarrollo';
 const almacen = crearAlmacen();
+
+// ?reiniciar en la URL: borra la partida de este celular (útil para organizadores y pruebas)
+const params = new URLSearchParams(location.search);
+if (params.has('reiniciar')) {
+  almacen.reiniciar();
+  params.delete('reiniciar');
+  const resto = params.toString();
+  history.replaceState(null, '', location.pathname + (resto ? `?${resto}` : ''));
+}
 const router = crearRouter(document.getElementById('app'), { almacen, estaciones, porId, claveEvento, obtenerBackend });
 
 crearSincronizador(almacen, obtenerBackend).sincronizar();

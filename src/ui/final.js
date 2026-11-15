@@ -25,7 +25,15 @@ export function pantallaFinal(raiz, { almacen, porId, obtenerBackend }) {
     <div class="tarjeta" id="detalle"></div>
     <p class="muted">Presenten esta pantalla en la mesa del LDCV para validar su resultado.</p>
     <p class="muted" id="sync"></p>
+    <button id="nuevo" class="secundario">Nuevo equipo (borrar esta partida)</button>
   `;
+
+  raiz.querySelector('#nuevo').addEventListener('click', () => {
+    if (confirm('¿Empezar con un equipo nuevo? Se borra la partida de este celular (el resultado ya enviado al servidor se conserva).')) {
+      almacen.reiniciar();
+      location.reload();
+    }
+  });
 
   const detalle = raiz.querySelector('#detalle');
   detalle.innerHTML = '<h2>Por estación</h2>' + estado.completadas.map((c, i) => h`
