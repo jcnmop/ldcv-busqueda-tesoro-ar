@@ -144,8 +144,9 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
       return JSON.stringify({ visible: c.visible, jugarOculto: document.querySelector('#jugar').hidden, msg: document.querySelector('#ar-msg').textContent });
     });
     const o = JSON.parse(ocultaYBloqueada);
-    if (!(!o.visible && o.jugarOculto)) console.log('  observación:', ocultaYBloqueada);
-    ok(!o.visible && o.jugarOculto && /observar/.test(o.msg), `${est.nombre}: tiempo de observación (pieza oculta, sin botón Jugar)`);
+    if (o.visible || o.jugarOculto) console.log('  observación:', ocultaYBloqueada);
+    ok(!o.visible && !o.jugarOculto && /Listo/.test(await page.textContent('#jugar')), `${est.nombre}: observación (pieza oculta, botón "Listo: iniciar el reto")`);
+    await page.waitForFunction(() => !globalThis.__observacion?.().observando, null, { timeout: 90000 });
   }
   await page.waitForSelector('#jugar:not([hidden])', { timeout: 90000 });
   ok(true, `${est.nombre}: MindAR reconoció el marcador en ${((Date.now() - t0) / 1000).toFixed(1)} s`);

@@ -27,7 +27,7 @@ export function pantallaPista(raiz, { almacen, porId, ir }) {
       <p>${est?.pista ?? 'Estación no encontrada en el registro.'}</p>
       <p class="muted">⏱ Tiempo para el reto: <strong>${est ? formatearMs(est.tiempoLimiteMs) : '—'} min</strong>
       · empieza a correr al atrapar la pieza dorada.</p>
-      ${est?.tiempoObservacion ? h`<p class="muted">👁 Antes tendrán <strong>${est.tiempoObservacion} s para observar</strong> el modelo: ¡presten atención a los detalles!</p>` : ''}
+      ${est?.tiempoObservacion ? h`<p class="muted">👁 Al encontrar el modelo tendrán hasta <strong>${est.tiempoObservacion} s para observarlo</strong>; si terminan antes, pueden iniciar el reto.</p>` : ''}
     </div>
     <p class="muted">Cuando lleguen al punto, toquen el botón y apunten la cámara al marcador.</p>
     <button id="escanear" ${est ? '' : 'disabled'}>Escanear marcador</button>

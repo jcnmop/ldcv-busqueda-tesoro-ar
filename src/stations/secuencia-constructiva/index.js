@@ -26,7 +26,7 @@ const estacion = {
   tiempoObservacion: 20,
   inclinacionInicial: 0.45,
   alturaBase: -0.25,
-  instruccionRA: 'Observen el corte: cada elemento y capa es una pista del orden constructivo.',
+  instruccionRA: 'Revisen el modelo con atención.',
 
   crearObjeto(THREE) {
     const reto = generarReto();
@@ -37,8 +37,7 @@ const estacion = {
 
   /** Tocar el modelo: despiece / reensamble animado. */
   alTocar(objeto) {
-    const separado = objeto.userData.alternarDespiece?.();
-    return separado ? 'Despiece: cada componente separado. Toquen de nuevo para reensamblar.' : 'Reensamblado.';
+    objeto.userData.alternarDespiece?.(); // sin texto: no se dan pistas
   },
 
   montarMinijuego(contenedor, ctx) {

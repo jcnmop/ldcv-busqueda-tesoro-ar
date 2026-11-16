@@ -115,8 +115,9 @@ export function pantallaEscaneo(raiz, ctx) {
       function mostrarObservacion() {
         msg.innerHTML = '<strong>¡Lo encontraron!</strong> '
           + (est.instruccionRA ? h`${est.instruccionRA} ` : 'Observen el modelo con atención. ')
-          + `<br>👁 Tiempo para observar: <strong id="obs">${Math.ceil(restanteObs)}</strong> s (giren el modelo y miren todos los detalles).`;
-        btnJugar.hidden = true;
+          + `<br>👁 Tiempo para observar: <strong id="obs">${Math.ceil(restanteObs)}</strong> s. Si ya terminaron, pueden iniciar el reto.`;
+        btnJugar.textContent = '✓ Listo: iniciar el reto';
+        btnJugar.hidden = false;
       }
       function mostrarListo() {
         msg.innerHTML = (observando || restanteObs <= 0) && est.tiempoObservacion
@@ -124,6 +125,7 @@ export function pantallaEscaneo(raiz, ctx) {
           : '<strong>¡Lo encontraron!</strong> '
             + (est.instruccionRA ? h`${est.instruccionRA} ` : 'Elijan Girar o Mover y usen un dedo; con dos, acerquen. ')
             + `<strong>Atrapen la pieza dorada</strong> para empezar el reto (tendrán ${formatearMs(est.tiempoLimiteMs)} min).`;
+        btnJugar.textContent = 'Jugar';
         btnJugar.hidden = false; // alternativa accesible
       }
       globalThis.__observacion = () => ({ observando, restante: restanteObs }); // diagnóstico (pruebas)
@@ -183,7 +185,11 @@ export function pantallaEscaneo(raiz, ctx) {
         try {
           if (est.alTocar) {
             const texto = est.alTocar(objeto, { THREE, golpe });
-            if (typeof texto === 'string') msg.innerHTML = h`${texto}`; // la estación puede informar algo (ej. una medida)
+            if (typeof texto === 'string' && texto) {
+              // la estación puede informar algo (ej. una medida); si sigue la observación, se conserva la cuenta
+              const obs = globalThis.__observacion?.();
+              msg.innerHTML = h`${texto}` + (obs?.observando ? `<br>👁 Tiempo para observar: <strong id="obs">${Math.max(0, Math.ceil(obs.restante))}</strong> s.` : '');
+            }
           } else rebote(objeto);
         } catch (e) { console.warn('alTocar:', e); }
       });
@@ -199,7 +205,7 @@ export function pantallaEscaneo(raiz, ctx) {
   })();
 
   btnJugar.addEventListener('click', () => {
-    if (globalThis.__observacion?.().observando) return; // no se puede saltar el tiempo de observación
+    // Durante la observación este botón es "Listo: iniciar el reto" (el equipo ya observó/midió)
     tocado = true; iniciarMinijuego();
   });
 

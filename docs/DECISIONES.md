@@ -183,3 +183,8 @@ El organizador quiere tener los datos de todas las partidas sin mostrar tabla de
 Se eligió Google Sheets + Apps Script (sin cuentas nuevas, descarga a Excel) sobre Supabase.
 Backend `sheets` = local + envío (`no-cors`, text/plain, upsert en el receptor). Se activa
 con `REGISTRO_SHEETS_URL` en `src/config.js`. Ninguna dependencia nueva.
+
+## 2026-11-15 · La observación es un máximo, no una espera obligatoria
+Durante la observación el botón cambia a "✓ Listo: iniciar el reto" (el equipo decide cuándo
+empezar). Agua baja a 20 s. Secuencia: instrucción mínima ("Revisen el modelo con atención") y el
+despiece no muestra texto, para no dar pistas.

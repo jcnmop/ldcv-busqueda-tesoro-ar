@@ -31,7 +31,7 @@ const estacion = {
   inclinacionInicial: 0.55, // vista algo desde arriba para ver la losa
   alTocarRapido: true,      // medir requiere toques seguidos
   tiempoObservacion: 60,    // tiempo para medir con calma antes de que aparezca la pieza
-  instruccionRA: '📏 Midan lo que usarán en el reto: largo y ancho de la losa y altura de una columna (toquen dos esquinas).',
+  instruccionRA: '📏 Midan lo que usarán en el reto: largo y ancho de la losa y altura de una columna (toquen dos esquinas). Cuando tengan las medidas, inicien el reto.',
   referencia: 'Construcción: cuantificación (cubicación) de materiales para presupuesto y pedido de concreto premezclado. El volumen se calcula con las dimensiones de planos y se verifica en sitio; los viajes de mixer se redondean siempre hacia arriba.',
 
   crearObjeto(THREE) {

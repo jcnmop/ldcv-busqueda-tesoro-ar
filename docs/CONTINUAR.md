@@ -84,7 +84,7 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 - [x] Tiempo de observación (Agua 30 s, Secuencia 20 s) antes de poder atrapar la pieza.
 
 - [x] Registro privado en Google Sheets programado (docs/REGISTRO.md).
-- [ ] Pegar la URL /exec del Apps Script en `REGISTRO_SHEETS_URL` y publicar.
+- [ ] (Siguiente sesión, acordado con JuanCa) Pegar la URL /exec del Apps Script en `REGISTRO_SHEETS_URL` y publicar.
 
 ## Pendiente (en orden sugerido)
 - [x] Detective de clashes reemplazado por **Agua para el barrio** (ambiental).
