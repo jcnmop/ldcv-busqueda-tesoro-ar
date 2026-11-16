@@ -171,3 +171,9 @@ Tocar el modelo hace un despiece animado. Observar el corte da pistas del orden:
 `tiempoObservacion` (s): al detectar el marcador corre una cuenta regresiva (solo mientras se ve
 el marcador); la pieza dorada y el botón Jugar aparecen al terminar. Agua 30 s, Secuencia 20 s.
 El mensaje no revela datos (ej. número de casas). `?observacion=N` en la URL lo reemplaza.
+
+## 2026-11-15 · Cinta métrica que reconoce la medida
+`clasificarMedida`: dos esquinas de la misma pieza → largo/ancho (losa) o altura (columna);
+diagonales y espesor/sección se rechazan con explicación. Volver a medir reemplaza (corrige).
+Las marcas de la cinta no interceptan toques (raycast vacío). Concreto: 60 s de observación
+para medir. Observación solo en Secuencia (20), Agua (30) y Concreto (60).

@@ -6,14 +6,18 @@
  * Reto: volumen total de concreto y viajes de mixer (6 m³).
  */
 import { puntajePorTiempo } from '../../core/puntaje.js';
-import { generarReto, evaluar, esquinaMasCercana, MIXER_M3, N_COLUMNAS } from './logica.js';
+import { generarReto, evaluar, esquinaMasCercana, clasificarMedida, NOMBRE_MEDIDA, MIXER_M3, N_COLUMNAS } from './logica.js';
 import { etiqueta } from '../../ar/modelos.js';
 
 const INTENTOS_MAX = 2;
 const ESCALA = 0.06; // unidades de marcador por metro real (losa de 10 m = 0.6 del ancho del póster)
 let limpiar = () => {};
 let retoActual = null;
-let mediciones = [];
+let mediciones = {}; // { largo, ancho, altura } en metros: volver a medir corrige
+
+const resumenMedidas = () => ['largo', 'ancho', 'altura']
+  .map((k) => `${NOMBRE_MEDIDA[k].replace(' de la losa', '').replace(' de la columna', '')} ${mediciones[k] != null ? mediciones[k].toFixed(2) + ' m ✓' : '—'}`)
+  .join(' · ');
 
 /** @type {import('../contrato.js').Estacion} */
 const estacion = {
@@ -26,13 +30,14 @@ const estacion = {
   alturaBase: -0.2,
   inclinacionInicial: 0.55, // vista algo desde arriba para ver la losa
   alTocarRapido: true,      // medir requiere toques seguidos
-  instruccionRA: '📏 Cinta: toquen dos esquinas para medir.',
+  tiempoObservacion: 60,    // tiempo para medir con calma antes de que aparezca la pieza
+  instruccionRA: '📏 Midan lo que usarán en el reto: largo y ancho de la losa y altura de una columna (toquen dos esquinas).',
   referencia: 'Construcción: cuantificación (cubicación) de materiales para presupuesto y pedido de concreto premezclado. El volumen se calcula con las dimensiones de planos y se verifica en sitio; los viajes de mixer se redondean siempre hacia arriba.',
 
   crearObjeto(THREE) {
     const reto = generarReto();
     retoActual = reto;
-    mediciones = [];
+    mediciones = {};
     globalThis.__retoConcreto = reto; // diagnóstico (pruebas)
     const { largo, ancho, espesor, lado, altura } = reto;
     const S = ESCALA;
@@ -45,6 +50,7 @@ const estacion = {
     const losa = new THREE.Mesh(new THREE.BoxGeometry(largo * S, ancho * S, Math.max(espesor * S, 0.012)), matConcreto);
     losa.position.z = altura * S + (Math.max(espesor * S, 0.012)) / 2;
     losa.userData.medidas = { hx: (largo * S) / 2, hy: (ancho * S) / 2, hz: Math.max(espesor * S, 0.012) / 2 };
+    losa.userData.tipo = 'losa';
     g.add(losa);
     // 4 columnas en las esquinas (retiradas medio lado hacia adentro)
     const col = Math.max(lado * S, 0.02);
@@ -52,6 +58,7 @@ const estacion = {
       const c = new THREE.Mesh(new THREE.BoxGeometry(col, col, altura * S), matColumna);
       c.position.set(sx * ((largo * S) / 2 - col / 2), sy * ((ancho * S) / 2 - col / 2), (altura * S) / 2);
       c.userData.medidas = { hx: col / 2, hy: col / 2, hz: (altura * S) / 2 };
+      c.userData.tipo = 'columna';
       g.add(c);
     }
     // Piso de referencia
@@ -68,42 +75,61 @@ const estacion = {
     return g;
   },
 
-  /** Cinta métrica: cada toque ajusta a una esquina; dos toques = una medida. */
+  /**
+   * Cinta métrica: cada toque se ajusta a la esquina más cercana de la pieza tocada; dos toques
+   * sobre la MISMA pieza = una medida. La app reconoce qué se midió (largo, ancho, altura) y
+   * volver a medir lo mismo reemplaza la medida anterior (corrección fácil).
+   */
   alTocar(objeto, { THREE, golpe }) {
-    if (!golpe?.object?.userData?.medidas) return 'Toquen directamente la losa o una columna para medir.';
-    const pieza = golpe.object;
+    const pieza = golpe?.object;
+    if (!pieza?.userData?.medidas) return '📏 Toquen directamente una esquina de la losa o de una columna.';
     const { hx, hy, hz } = pieza.userData.medidas;
-    const local = pieza.worldToLocal(golpe.point.clone());
-    const e = esquinaMasCercana(local, hx, hy, hz);
-    const punto = pieza.localToWorld(new THREE.Vector3(e.x, e.y, e.z));
-    const enObjeto = objeto.worldToLocal(punto.clone()); // en coordenadas del modelo
+    const esq = esquinaMasCercana(pieza.worldToLocal(golpe.point.clone()), hx, hy, hz);
+    const enObjeto = objeto.worldToLocal(pieza.localToWorld(new THREE.Vector3(esq.x, esq.y, esq.z)));
     const cinta = objeto.userData.cinta;
-
-    const bolita = (p, color) => {
-      const m = new THREE.Mesh(new THREE.SphereGeometry(0.012, 12, 10), new THREE.MeshBasicMaterial({ color }));
+    // Las marcas de la cinta no deben interceptar toques: así se puede volver a medir encima
+    const sinToque = (o) => { o.raycast = () => {}; return o; };
+    const bolita = (p, padre) => {
+      const m = sinToque(new THREE.Mesh(new THREE.SphereGeometry(0.012, 12, 10), new THREE.MeshBasicMaterial({ color: 0xf2a900 })));
       m.position.copy(p);
-      cinta.add(m);
+      padre.add(m);
     };
 
-    if (!objeto.userData.pendiente) {
-      // Primer punto: si ya había 3 medidas dibujadas, limpiar para no saturar
-      if (cinta.children.length > 3 * 4) cinta.clear();
-      objeto.userData.pendiente = enObjeto;
-      bolita(enObjeto, 0xf2a900);
-      return 'Punto 1 marcado (esquina). Toquen la otra esquina.';
+    const pend = objeto.userData.pendiente;
+    // Primer punto (o el segundo cayó en otra pieza: se toma como nuevo primer punto)
+    if (!pend || pend.pieza !== pieza) {
+      cinta.getObjectByName('pendiente')?.removeFromParent();
+      const marca = new THREE.Group(); marca.name = 'pendiente';
+      bolita(enObjeto, marca);
+      cinta.add(marca);
+      objeto.userData.pendiente = { pieza, esq, punto: enObjeto };
+      return pend && pend.pieza !== pieza
+        ? '📏 Las dos esquinas deben ser de la misma pieza. Empezamos de nuevo: punto 1 marcado.'
+        : `📏 Punto 1 marcado. Toquen la otra esquina. · ${resumenMedidas()}`;
     }
-    const a = objeto.userData.pendiente;
+
     objeto.userData.pendiente = null;
-    bolita(enObjeto, 0xf2a900);
-    const geo = new THREE.BufferGeometry().setFromPoints([a, enObjeto]);
-    cinta.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: 0xf2a900 })));
-    const metros = Math.round((a.distanceTo(enObjeto) / ESCALA) * 100) / 100;
-    const rotulo = etiqueta(THREE, `${metros.toFixed(2)} m`, { ancho: 0.22, color: '#0b1f3a', fondo: 'rgba(242,169,0,0.95)' });
-    rotulo.position.copy(a).add(enObjeto).multiplyScalar(0.5).add(new THREE.Vector3(0, 0, 0.04));
-    cinta.add(rotulo);
-    if (metros > 0) mediciones.push(metros);
+    cinta.getObjectByName('pendiente')?.removeFromParent();
+    const tipoMedida = clasificarMedida(pieza.userData.tipo, pend.esq, esq);
+    if (tipoMedida === 'nula') return '📏 Tocaron la misma esquina dos veces. Toquen dos esquinas distintas.';
+    if (tipoMedida === 'diagonal') return '📏 Eso fue una diagonal: midan a lo largo de un solo borde (horizontal o vertical).';
+    if (tipoMedida === 'espesor' || tipoMedida === 'seccion') return '📏 Esa medida viene en los planos; midan largo, ancho de la losa o altura de una columna.';
+
+    const metros = Math.round((pend.punto.distanceTo(enObjeto) / ESCALA) * 100) / 100;
+    const corrigio = mediciones[tipoMedida] != null;
+    mediciones[tipoMedida] = metros;
+    // Dibujo: una línea por tipo de medida (al volver a medir, se reemplaza)
+    cinta.getObjectByName(tipoMedida)?.removeFromParent();
+    const grupo = new THREE.Group(); grupo.name = tipoMedida;
+    bolita(pend.punto, grupo); bolita(enObjeto, grupo);
+    grupo.add(sinToque(new THREE.Line(new THREE.BufferGeometry().setFromPoints([pend.punto, enObjeto]), new THREE.LineBasicMaterial({ color: 0xf2a900 }))));
+    const rotulo = sinToque(etiqueta(THREE, `${metros.toFixed(2)} m`, { ancho: 0.2, color: '#0b1f3a', fondo: 'rgba(242,169,0,0.95)' }));
+    rotulo.position.copy(pend.punto).add(enObjeto).multiplyScalar(0.5).add(new THREE.Vector3(0, 0, 0.04));
+    grupo.add(rotulo);
+    cinta.add(grupo);
     globalThis.__ultimaMedida = metros;
-    return `📏 Medida: ${metros.toFixed(2)} m. Sus medidas: ${mediciones.map((m) => m.toFixed(2)).join(' · ')}`;
+    globalThis.__medidasConcreto = { ...mediciones };
+    return `📏 ${NOMBRE_MEDIDA[tipoMedida]}: ${metros.toFixed(2)} m${corrigio ? ' (corregida)' : ''}. · ${resumenMedidas()}`;
   },
 
   montarMinijuego(contenedor, ctx) {
@@ -117,7 +143,8 @@ const estacion = {
       <h2>Cubicación de concreto</h2>
       ${demo ? `<p class="muted">(Modo demo — medidas del modelo: losa ${reto.largo} × ${reto.ancho} m, columnas de ${reto.altura} m de alto.)</p>` : ''}
       <div class="tarjeta" style="gap:6px">
-        <p><strong>Sus medidas en RA:</strong> ${mediciones.length ? mediciones.map((m) => m.toFixed(2) + ' m').join(' · ') : '<span class="muted">(no midieron nada)</span>'}</p>
+        <p><strong>Sus medidas en RA:</strong></p>
+        ${['largo', 'ancho', 'altura'].map((k) => `<p style="margin:0">${NOMBRE_MEDIDA[k]}: <strong>${mediciones[k] != null ? mediciones[k].toFixed(2) + ' m' : '— (no la midieron)'}</strong></p>`).join('')}
         <p><strong>De los planos:</strong> espesor de losa <strong>${Math.round(reto.espesor * 100)} cm</strong> ·
         ${N_COLUMNAS} columnas de <strong>${Math.round(reto.lado * 100)} × ${Math.round(reto.lado * 100)} cm</strong></p>
       </div>
@@ -154,7 +181,7 @@ const estacion = {
       const r = evaluar(reto, { opcionId: opcion, viajes: inV.value });
       const detalle = { largo: reto.largo, ancho: reto.ancho, espesor: reto.espesor, lado: reto.lado, altura: reto.altura,
         losa: reto.losa, columnas: reto.columnas, total: reto.total, mixer: reto.mixer, viajes: reto.viajes,
-        mediciones: [...mediciones], respuestaVolumen: reto.opciones.find((o) => o.id === opcion), respuestaViajes: Number(inV.value), ...r };
+        mediciones: { ...mediciones }, respuestaVolumen: reto.opciones.find((o) => o.id === opcion), respuestaViajes: Number(inV.value), ...r };
       const aciertos = (r.volumenOk ? 1 : 0) + (r.viajesOk ? 1 : 0);
       if (r.correcto) {
         fb.innerHTML = `<span style="color:var(--ok)">¡Correcto! ${reto.total} m³ → ${reto.viajes} viaje(s) de mixer.</span>`;
@@ -183,7 +210,8 @@ const estacion = {
   explicarSolucion(d) {
     if (d?.total == null) return [];
     return [
-      `Medidas: losa ${d.largo} × ${d.ancho} m, columnas de ${d.altura} m. De planos: espesor ${d.espesor} m, columnas ${d.lado} × ${d.lado} m.${d.mediciones?.length ? ` Ustedes midieron: ${d.mediciones.map((m) => m.toFixed(2)).join(', ')} m.` : ''}`,
+      `Medidas reales: losa ${d.largo} × ${d.ancho} m, columnas de ${d.altura} m. De planos: espesor ${d.espesor} m, columnas ${d.lado} × ${d.lado} m.`
+        + (d.mediciones && Object.keys(d.mediciones).length ? ` Ustedes midieron: ${['largo', 'ancho', 'altura'].filter((k) => d.mediciones[k] != null).map((k) => `${k} ${d.mediciones[k].toFixed(2)} m`).join(', ')}.` : ''),
       `Losa: ${d.largo} × ${d.ancho} × ${d.espesor} = ${d.losa} m³. Columnas: 4 × ${d.lado}² × ${d.altura} = ${d.columnas} m³.`,
       `Total = ${d.total} m³ ${d.volumenOk ? '✓' : '✗' + (d.respuestaVolumen?.error ? ' (' + d.respuestaVolumen.error + ')' : '')}.`,
       `Viajes = ${d.total} ÷ ${d.mixer} = ${(d.total / d.mixer).toFixed(2)} → ${d.viajes} (siempre hacia arriba). Ustedes: ${d.respuestaViajes} ${d.viajesOk ? '✓' : '✗'}.`,

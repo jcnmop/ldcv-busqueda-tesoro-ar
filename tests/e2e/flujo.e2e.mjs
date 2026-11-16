@@ -141,9 +141,10 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
     await page.waitForFunction(() => /observar/.test(document.querySelector('#ar-msg')?.textContent || ''), null, { timeout: 90000 });
     const ocultaYBloqueada = await page.evaluate(() => {
       let c = null; globalThis.__escenaRA.ancla.group.traverse((o) => { if (o.userData?.coleccionable) c = o; });
-      return JSON.stringify({ visible: c.visible, jugarOculto: document.querySelector('#jugar').hidden, msg: document.querySelector('#ar-msg').textContent.slice(0, 120) });
+      return JSON.stringify({ visible: c.visible, jugarOculto: document.querySelector('#jugar').hidden, msg: document.querySelector('#ar-msg').textContent });
     });
     const o = JSON.parse(ocultaYBloqueada);
+    if (!(!o.visible && o.jugarOculto)) console.log('  observación:', ocultaYBloqueada);
     ok(!o.visible && o.jugarOculto && /observar/.test(o.msg), `${est.nombre}: tiempo de observación (pieza oculta, sin botón Jugar)`);
   }
   await page.waitForSelector('#jugar:not([hidden])', { timeout: 90000 });
@@ -232,20 +233,25 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
       const { hx, hy, hz } = losa.userData.medidas;
       const r = renderer.domElement.getBoundingClientRect();
       // Puntos sobre la cara superior, cerca de las dos esquinas del borde más cercano (−y)
-      return [[-0.8 * hx, -0.8 * hy, hz], [0.8 * hx, -0.8 * hy, hz]].map(([x, y, z]) => {
+      // 0,1: borde frontal (largo) · 2: esquina trasera opuesta (para probar la diagonal)
+      return [[-0.8 * hx, -0.8 * hy, hz], [0.8 * hx, -0.8 * hy, hz], [0.8 * hx, 0.8 * hy, hz]].map(([x, y, z]) => {
         const v = losa.localToWorld(new THREE.Vector3(x, y, z)).project(camera);
         return [r.left + ((v.x + 1) / 2) * r.width, r.top + ((1 - v.y) / 2) * r.height];
       });
     });
-    await page.mouse.click(puntos[0][0], puntos[0][1]);
-    await page.waitForTimeout(500);
-    await page.mouse.click(puntos[1][0], puntos[1][1]);
-    await page.waitForTimeout(500);
-    console.log('  puntos cinta:', JSON.stringify(puntos.map((q) => q.map(Math.round))), '· msg:', (await page.textContent('#ar-msg')).slice(0, 80), '· toque:', await page.evaluate(() => globalThis.__ultimoToque + '/' + globalThis.__ramaToque));
-    const medida = await page.evaluate(() => globalThis.__ultimaMedida);
+    const tocar = async (q) => { await page.mouse.click(q[0], q[1]); await page.waitForTimeout(450); };
     const largo = await page.evaluate(() => globalThis.__retoConcreto.largo);
-    ok(Math.abs(medida - largo) < 0.01, `Concreto: la cinta midió ${medida} m = largo real ${largo} m`);
-    ok((await page.textContent('#ar-msg')).includes('Medida'), 'Concreto: la medida se muestra en el panel');
+    // Diagonal: debe rechazarse
+    await tocar(puntos[0]); await tocar(puntos[2]);
+    ok((await page.textContent('#ar-msg')).includes('diagonal'), 'Concreto: una diagonal se rechaza con explicación');
+    // Largo
+    await tocar(puntos[0]); await tocar(puntos[1]);
+    let msg = await page.textContent('#ar-msg');
+    ok(msg.includes('Largo de la losa') && Math.abs((await page.evaluate(() => globalThis.__medidasConcreto.largo)) - largo) < 0.01, `Concreto: la cinta reconoce el largo (${largo} m)`);
+    // Volver a medir: corrige
+    await tocar(puntos[1]); await tocar(puntos[0]);
+    msg = await page.textContent('#ar-msg');
+    ok(msg.includes('corregida') && msg.includes('Ancho —'), 'Concreto: volver a medir corrige y el panel muestra lo que falta');
     await page.screenshot({ path: resolve(tmp, 'concreto-cinta.png') });
   }
 

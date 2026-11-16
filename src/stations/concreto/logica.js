@@ -59,3 +59,21 @@ export function evaluar(reto, { opcionId, viajes: v }) {
 export function esquinaMasCercana(p, hx, hy, hz) {
   return { x: Math.sign(p.x || 1) * hx, y: Math.sign(p.y || 1) * hy, z: Math.sign(p.z || 1) * hz };
 }
+
+/**
+ * Identifica QUÉ se midió a partir de las dos esquinas (coordenadas locales de la misma pieza).
+ * Losa: solo cambia x → 'largo'; solo y → 'ancho'; solo z → 'espesor'. Columna: solo z → 'altura'.
+ * Cualquier otra combinación es una diagonal o una medida que no sirve para el reto.
+ * @returns {'largo'|'ancho'|'espesor'|'altura'|'seccion'|'diagonal'|'nula'}
+ */
+export function clasificarMedida(tipo, a, b, tol = 1e-6) {
+  const dx = Math.abs(a.x - b.x) > tol, dy = Math.abs(a.y - b.y) > tol, dz = Math.abs(a.z - b.z) > tol;
+  const n = dx + dy + dz;
+  if (n === 0) return 'nula';
+  if (n > 1) return 'diagonal';
+  if (tipo === 'losa') return dx ? 'largo' : dy ? 'ancho' : 'espesor';
+  if (tipo === 'columna') return dz ? 'altura' : 'seccion';
+  return 'diagonal';
+}
+
+export const NOMBRE_MEDIDA = { largo: 'Largo de la losa', ancho: 'Ancho de la losa', altura: 'Altura de la columna' };

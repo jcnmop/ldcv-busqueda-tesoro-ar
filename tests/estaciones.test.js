@@ -226,7 +226,19 @@ test('concreto: evaluar, puntaje y explicación', () => {
   assert.equal(concLogica.evaluar(reto, { opcionId: 'solo-losa', viajes: reto.viajes }).volumenOk, false);
   assert.equal(concreto.calcularPuntaje({ completado: true, intentos: 1 }, 0), 100);
   assert.equal(concreto.calcularPuntaje({ completado: false, aciertos: 1, intentos: 2 }, 0), 40);
-  const ex = concreto.explicarSolucion({ ...reto, mediciones: [8, 5], respuestaViajes: reto.viajes, volumenOk: true, viajesOk: true });
+  const ex = concreto.explicarSolucion({ ...reto, mediciones: { largo: 8, ancho: 5 }, respuestaViajes: reto.viajes, volumenOk: true, viajesOk: true });
+  assert.ok(ex[0].includes('largo 8.00 m'));
   assert.ok(ex.some((l) => l.includes('hacia arriba')));
   assert.deepEqual(concreto.explicarSolucion(undefined), []);
+});
+
+test('concreto: la cinta reconoce qué se midió', () => {
+  const c = (x, y, z) => ({ x, y, z });
+  assert.equal(concLogica.clasificarMedida('losa', c(-1, -2, 0.5), c(1, -2, 0.5)), 'largo');
+  assert.equal(concLogica.clasificarMedida('losa', c(1, -2, 0.5), c(1, 2, 0.5)), 'ancho');
+  assert.equal(concLogica.clasificarMedida('losa', c(1, 2, 0.5), c(1, 2, -0.5)), 'espesor');
+  assert.equal(concLogica.clasificarMedida('losa', c(-1, -2, 0.5), c(1, 2, 0.5)), 'diagonal');
+  assert.equal(concLogica.clasificarMedida('columna', c(1, 1, -1), c(1, 1, 1)), 'altura');
+  assert.equal(concLogica.clasificarMedida('columna', c(1, 1, 1), c(-1, 1, 1)), 'seccion');
+  assert.equal(concLogica.clasificarMedida('losa', c(1, 1, 1), c(1, 1, 1)), 'nula');
 });
