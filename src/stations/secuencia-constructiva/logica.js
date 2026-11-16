@@ -5,6 +5,7 @@
 
 export const BANCOS = [
   {
+    id: 'losa',
     titulo: 'Construcción de una losa de entrepiso en concreto',
     pasos: [
       'Replanteo y nivelación',
@@ -17,6 +18,7 @@ export const BANCOS = [
     ],
   },
   {
+    id: 'cimentacion',
     titulo: 'Cimentación superficial (placa aislada)',
     pasos: [
       'Trazo y excavación',
@@ -28,6 +30,7 @@ export const BANCOS = [
     ],
   },
   {
+    id: 'escaneo',
     titulo: 'Levantamiento con escáner láser (flujo LDCV)',
     pasos: [
       'Planificación de estaciones y traslapes',
@@ -40,6 +43,7 @@ export const BANCOS = [
     ],
   },
   {
+    id: 'pavimento',
     titulo: 'Pavimento flexible (asfalto)',
     pasos: [
       'Preparación de la subrasante',
@@ -66,7 +70,7 @@ export function generarReto(aleatorio = Math.random) {
   let desordenados = barajar(banco.pasos, aleatorio);
   // Evitar que salga ya ordenado
   if (desordenados.every((p, i) => p === banco.pasos[i])) desordenados = [...banco.pasos].reverse();
-  return { titulo: banco.titulo, correcto: banco.pasos, desordenados };
+  return { id: banco.id, titulo: banco.titulo, correcto: banco.pasos, desordenados };
 }
 
 /** Cuenta pasos en la posición correcta. */

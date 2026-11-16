@@ -161,3 +161,13 @@ El rectángulo proyectado fallaba con perspectiva fuerte (pieza cerca de la cám
 círculo alrededor del centro visible, radio acotado (110/150 px) y sin captura si el centro
 está fuera de pantalla. Las instrucciones del panel RA deben ser cortas: un texto largo
 agranda el panel y sube los botones sobre el modelo.
+
+## 2026-11-15 · Secuencia constructiva con modelos del proceso real
+El objeto 3D es el corte del proceso que le tocó al equipo (cimentación, losa, pavimento o
+escaneo láser; `escenas.js`) y el reto se genera junto con el objeto (`retoActual`).
+Tocar el modelo hace un despiece animado. Observar el corte da pistas del orden: es deliberado.
+
+## 2026-11-15 · Tiempo de observación por estación
+`tiempoObservacion` (s): al detectar el marcador corre una cuenta regresiva (solo mientras se ve
+el marcador); la pieza dorada y el botón Jugar aparecen al terminar. Agua 30 s, Secuencia 20 s.
+El mensaje no revela datos (ej. número de casas). `?observacion=N` en la URL lo reemplaza.

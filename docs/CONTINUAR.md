@@ -79,6 +79,10 @@ secuencia-constructiva, clash-bim y ojo-ingeniero.
 - [x] `concreto`: cubicación con cinta métrica virtual en RA. Ahora son 6 estaciones (6 piezas del puente).
 - [x] 45 pruebas unitarias; e2e mide con la cinta y resuelve las 6 estaciones.
 
+## Ajustes 2026-11-15 (noche)
+- [x] Secuencia constructiva: 4 modelos 3D coherentes con el proceso + despiece al tocar.
+- [x] Tiempo de observación (Agua 30 s, Secuencia 20 s) antes de poder atrapar la pieza.
+
 ## Pendiente (en orden sugerido)
 - [x] Detective de clashes reemplazado por **Agua para el barrio** (ambiental).
 - [ ] Estaciones candidatas conversadas (sin implementar): cercha tensión/compresión, nivelación

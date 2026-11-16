@@ -21,6 +21,8 @@ const estacion = {
   tiempoLimiteMs: 180000,
   puntosMax: 100,
   alturaBase: -0.1, // el barrio va a media altura del póster: lejos de los botones inferiores
+  tiempoObservacion: 30,
+  instruccionRA: 'Observen con atención todos los detalles del barrio.',
   referencia: 'Ingeniería sanitaria / ambiental: demanda de agua potable = población × dotación (L/hab/día) y almacenamiento para regular el consumo. En Costa Rica las dotaciones de diseño las fija la normativa del AyA.',
 
   crearObjeto(THREE) {

@@ -70,6 +70,10 @@
  * @property {string} [instruccionRA]
  *   OPCIONAL. Texto propio para el panel de RA al encontrar el marcador (qué hacer con el objeto).
  *
+ * @property {number} [tiempoObservacion]
+ *   OPCIONAL. Segundos de observación obligatoria al encontrar el marcador, antes de que aparezca
+ *   la pieza dorada (para estaciones donde hay que mirar el modelo con atención).
+ *
  * @property {number} [inclinacionInicial]
  *   OPCIONAL. Inclinación inicial del objeto en radianes (vista desde arriba para objetos horizontales).
  *
@@ -124,6 +128,7 @@ export function validarEstacion(e) {
   opc('instruccionRA', 'string');
   opc('inclinacionInicial', 'number');
   opc('alTocarRapido', 'boolean');
+  opc('tiempoObservacion', 'number');
   if (e?.orientacion !== undefined && !['pared', 'mesa'].includes(e.orientacion)) errores.push('"orientacion" debe ser "pared" o "mesa"');
 
   if (typeof e?.id === 'string' && !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(e.id)) {

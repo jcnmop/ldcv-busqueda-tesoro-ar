@@ -95,20 +95,54 @@ export function pantallaEscaneo(raiz, ctx) {
         ...(est.alturaBase != null ? { alturaBase: est.alturaBase } : {}),
         ...(est.inclinacionInicial != null ? { inclinacion: est.inclinacionInicial } : {}),
         onEncontrado() {
+          marcadorVisible = true;
           if (tocado) return;
-          msg.innerHTML = '<strong>¡Lo encontraron!</strong> '
-            + (est.instruccionRA ? h`${est.instruccionRA} ` : 'Elijan Girar o Mover y usen un dedo; con dos, acerquen. ')
-            + `<strong>Atrapen la pieza dorada</strong> para empezar el reto (tendrán ${formatearMs(est.tiempoLimiteMs)} min).`;
-          btnJugar.hidden = false; // alternativa accesible
+          if (observando) { mostrarObservacion(); return; }
+          mostrarListo();
           navigator.vibrate?.(30);
         },
-        onPerdido() { /* el botón sigue disponible: ya probaron que están ahí */ },
+        onPerdido() { marcadorVisible = false; },
       });
+
+      // TIEMPO DE OBSERVACIÓN (opcional por estación): al encontrar el marcador, cuenta
+      // regresiva antes de que aparezca la pieza dorada. Solo corre mientras se ve el marcador.
+      // ?observacion=N en la URL lo reemplaza (útil para organizadores y pruebas).
+      const paramObs = new URLSearchParams(location.search).get('observacion');
+      let restanteObs = paramObs != null ? Number(paramObs) : (est.tiempoObservacion ?? 0);
+      let observando = restanteObs > 0;
+      let marcadorVisible = false;
+      if (observando) coleccionable.visible = false;
+      function mostrarObservacion() {
+        msg.innerHTML = '<strong>¡Lo encontraron!</strong> '
+          + (est.instruccionRA ? h`${est.instruccionRA} ` : 'Observen el modelo con atención. ')
+          + `<br>👁 Tiempo para observar: <strong id="obs">${Math.ceil(restanteObs)}</strong> s (giren el modelo y miren todos los detalles).`;
+        btnJugar.hidden = true;
+      }
+      function mostrarListo() {
+        msg.innerHTML = (observando || restanteObs <= 0) && est.tiempoObservacion
+          ? `<strong>¡Tiempo!</strong> Ahora <strong>atrapen la pieza dorada</strong> para empezar el reto (tendrán ${formatearMs(est.tiempoLimiteMs)} min).`
+          : '<strong>¡Lo encontraron!</strong> '
+            + (est.instruccionRA ? h`${est.instruccionRA} ` : 'Elijan Girar o Mover y usen un dedo; con dos, acerquen. ')
+            + `<strong>Atrapen la pieza dorada</strong> para empezar el reto (tendrán ${formatearMs(est.tiempoLimiteMs)} min).`;
+        btnJugar.hidden = false; // alternativa accesible
+      }
+      globalThis.__observacion = () => ({ observando, restante: restanteObs }); // diagnóstico (pruebas)
 
       // Órbita de la pieza: siempre por delante del póster (diseño: -Y = hacia el jugador)
       let t = 0;
       let atrapada = false;
       escena.enCadaCuadro((dt) => {
+        if (observando && marcadorVisible && !tocado) {
+          restanteObs -= dt;
+          const el = msg.querySelector('#obs');
+          if (el) el.textContent = Math.max(0, Math.ceil(restanteObs));
+          if (restanteObs <= 0) {
+            observando = false;
+            coleccionable.visible = true;
+            navigator.vibrate?.([40, 40, 40]);
+            mostrarListo();
+          }
+        }
         if (atrapada) return;
         t += dt;
         coleccionable.position.set(0.3 * Math.sin(t * 0.9), -0.28 - 0.08 * Math.cos(t * 0.9), 0.62 + 0.06 * Math.sin(t * 2.3));
@@ -164,7 +198,10 @@ export function pantallaEscaneo(raiz, ctx) {
     }
   })();
 
-  btnJugar.addEventListener('click', () => { tocado = true; iniciarMinijuego(); });
+  btnJugar.addEventListener('click', () => {
+    if (globalThis.__observacion?.().observando) return; // no se puede saltar el tiempo de observación
+    tocado = true; iniciarMinijuego();
+  });
 
   let minijuegoIniciado = false;
   function iniciarMinijuego() {

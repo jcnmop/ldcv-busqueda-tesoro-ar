@@ -132,11 +132,20 @@ for (let i = 0; i < estadoSemilla.ruta.length; i++) {
   const est = porId[id];
   const { nav, page } = await abrirNavegador(videoDeMarcador(est.marcadorId));
   await page.addInitScript(([k, v]) => localStorage.setItem(k, v), [CLAVE_STORAGE, JSON.stringify(estadoActual)]);
-  await page.goto(base + '/');
+  await page.goto(base + '/?observacion=2'); // tiempo de observación corto para la prueba
   await page.waitForSelector('#escanear');
   await page.click('#escanear');
 
   const t0 = Date.now();
+  if (est.tiempoObservacion) {
+    await page.waitForFunction(() => /observar/.test(document.querySelector('#ar-msg')?.textContent || ''), null, { timeout: 90000 });
+    const ocultaYBloqueada = await page.evaluate(() => {
+      let c = null; globalThis.__escenaRA.ancla.group.traverse((o) => { if (o.userData?.coleccionable) c = o; });
+      return JSON.stringify({ visible: c.visible, jugarOculto: document.querySelector('#jugar').hidden, msg: document.querySelector('#ar-msg').textContent.slice(0, 120) });
+    });
+    const o = JSON.parse(ocultaYBloqueada);
+    ok(!o.visible && o.jugarOculto && /observar/.test(o.msg), `${est.nombre}: tiempo de observación (pieza oculta, sin botón Jugar)`);
+  }
   await page.waitForSelector('#jugar:not([hidden])', { timeout: 90000 });
   ok(true, `${est.nombre}: MindAR reconoció el marcador en ${((Date.now() - t0) / 1000).toFixed(1)} s`);
   // Esperar a que los modelos .glb (si hay) terminen de cargar

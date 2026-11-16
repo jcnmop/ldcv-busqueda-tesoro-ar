@@ -1,13 +1,17 @@
 /**
  * ESTACIÓN: Secuencia constructiva
- * Objeto RA: torre de "bloques" apilados que giran. Minijuego: ordenar los pasos
- * tocándolos en orden (toque = mover arriba/abajo). 2 verificaciones.
+ * Objeto RA: corte 3D del proceso que le tocó al equipo (cimentación, losa, pavimento o
+ * escaneo láser) con sus componentes reales; tocarlo hace un DESPIECE animado.
+ * El equipo tiene un tiempo de observación antes de que aparezca la pieza dorada.
+ * Minijuego: ordenar los pasos (toque = seleccionar y mover). 2 verificaciones.
  */
 import { puntajePorAciertos, puntajePorTiempo } from '../../core/puntaje.js';
 import { generarReto, evaluar } from './logica.js';
+import { crearEscenaProceso } from './escenas.js';
 
 const VERIFICACIONES_MAX = 2;
 let limpiar = () => {};
+let retoActual = null; // el modelo 3D y el reto deben ser del mismo proceso
 
 /** @type {import('../contrato.js').Estacion} */
 const estacion = {
@@ -19,24 +23,27 @@ const estacion = {
   puntosMax: 100,
   referencia: 'Procesos constructivos y planificación de obra: precedencias entre actividades. En el LDCV, flujo de captura (Leica P40/BLK360) → registro → georreferenciación CRTM05 → modelo BIM.',
 
+  tiempoObservacion: 20,
+  inclinacionInicial: 0.45,
+  alturaBase: -0.25,
+  instruccionRA: 'Observen el corte: cada elemento y capa es una pista del orden constructivo.',
+
   crearObjeto(THREE) {
-    const g = new THREE.Group();
-    const colores = [0xf2a900, 0x9aa5b1, 0x2e9e5b, 0x1e88e5, 0xd0453c];
-    for (let i = 0; i < 5; i++) {
-      const bloque = new THREE.Mesh(
-        new THREE.BoxGeometry(0.5 - i * 0.07, 0.5 - i * 0.07, 0.1),
-        new THREE.MeshStandardMaterial({ color: colores[i] }),
-      );
-      bloque.position.z = 0.05 + i * 0.11;
-      bloque.rotation.z = i * 0.25;
-      g.add(bloque);
-    }
-    g.userData.girar = 0.6; // rad/s (lo anima escaneo.js)
-    return g;
+    const reto = generarReto();
+    retoActual = reto;
+    globalThis.__retoSecuencia = reto; // diagnóstico (pruebas)
+    return crearEscenaProceso(THREE, reto.id);
+  },
+
+  /** Tocar el modelo: despiece / reensamble animado. */
+  alTocar(objeto) {
+    const separado = objeto.userData.alternarDespiece?.();
+    return separado ? 'Despiece: cada componente separado. Toquen de nuevo para reensamblar.' : 'Reensamblado.';
   },
 
   montarMinijuego(contenedor, ctx) {
-    const reto = generarReto();
+    const reto = retoActual ?? generarReto(); // sin RA (modo demo) se genera aquí
+    retoActual = null;
     let orden = [...reto.desordenados];
     let verificaciones = 0;
     let seleccionado = -1;

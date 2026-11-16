@@ -180,7 +180,7 @@ export async function crearEscena(contenedor, { marcadorSrc, objeto, orientacion
     return { dist: Math.hypot(xPx - cx, yPx - cy), radio: Math.hypot(bx - cx, by - cy), fuera };
   }
 
-  const coleccionableDe = (o) => { while (o) { if (o.userData?.coleccionable) return o; o = o.parent; } return null; };
+  const coleccionableDe = (o) => { while (o) { if (o.userData?.coleccionable) return o.visible ? o : null; o = o.parent; } return null; };
 
   function resolverToque(x, y) {
     const p = aNDC(x, y);
