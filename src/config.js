@@ -27,3 +27,10 @@ export const AVATAR = {
 
 /** Crédito que aparece en pequeño en la bienvenida. */
 export const CREADO_POR = 'Creado por Juan Carlos Navarrete';
+
+/**
+ * REGISTRO PRIVADO DE PARTIDAS (Google Sheets). Pegar aquí la URL de la aplicación web de
+ * Apps Script (termina en /exec). Vacío = cada celular guarda solo lo suyo (modo local).
+ * Instalación: docs/REGISTRO.md. Los estudiantes no ven esta hoja.
+ */
+export const REGISTRO_SHEETS_URL = '';

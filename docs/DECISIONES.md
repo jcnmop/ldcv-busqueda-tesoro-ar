@@ -177,3 +177,9 @@ El mensaje no revela datos (ej. número de casas). `?observacion=N` en la URL lo
 diagonales y espesor/sección se rechazan con explicación. Volver a medir reemplaza (corrige).
 Las marcas de la cinta no interceptan toques (raycast vacío). Concreto: 60 s de observación
 para medir. Observación solo en Secuencia (20), Agua (30) y Concreto (60).
+
+## 2026-11-15 · Registro privado en Google Sheets (sin tabla pública)
+El organizador quiere tener los datos de todas las partidas sin mostrar tabla de posiciones.
+Se eligió Google Sheets + Apps Script (sin cuentas nuevas, descarga a Excel) sobre Supabase.
+Backend `sheets` = local + envío (`no-cors`, text/plain, upsert en el receptor). Se activa
+con `REGISTRO_SHEETS_URL` en `src/config.js`. Ninguna dependencia nueva.
